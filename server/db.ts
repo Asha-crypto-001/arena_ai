@@ -1,0 +1,360 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import {
+  User, Learner, Educator, Category, Skill, EducatorSkill,
+  Qualification, Portfolio, Verification, LearnerRequest,
+  Match, Booking, Availability, Payment, Transaction, Review,
+  Message, Notification, AdminAction
+} from './types.js';
+import {
+  initialCategories, initialSkills, initialUsers, initialLearners,
+  initialEducators, initialEducatorSkills, initialQualifications,
+  initialPortfolios, initialVerifications, initialLearnerRequests,
+  initialMatches, initialBookings, initialPayments, initialTransactions,
+  initialReviews, initialMessages, initialNotifications, initialAdminActions
+} from './seedData.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_FILE = path.join(__dirname, 'data', 'iskilllink_db.json');
+
+export interface DatabaseState {
+  users: User[];
+  learners: Learner[];
+  educators: Educator[];
+  categories: Category[];
+  skills: Skill[];
+  educatorSkills: EducatorSkill[];
+  qualifications: Qualification[];
+  portfolios: Portfolio[];
+  verifications: Verification[];
+  learnerRequests: LearnerRequest[];
+  matches: Match[];
+  bookings: Booking[];
+  availability: Availability[];
+  payments: Payment[];
+  transactions: Transaction[];
+  reviews: Review[];
+  messages: Message[];
+  notifications: Notification[];
+  adminActions: AdminAction[];
+}
+
+class Database {
+  private data: DatabaseState;
+
+  constructor() {
+    this.data = this.loadDatabase();
+  }
+
+  private loadDatabase(): DatabaseState {
+    try {
+      if (fs.existsSync(DB_FILE)) {
+        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        // Ensure founder Ashabahebwa Hassan is always present in users
+        if (!parsed.users.some((u: User) => u.email === 'ashabahebwahassan665@gmail.com')) {
+          return this.resetToDefault();
+        }
+        return parsed;
+      }
+    } catch (err) {
+      console.warn('Could not load persisted DB file, resetting to initial seed data.', err);
+    }
+
+    return this.resetToDefault();
+  }
+
+  private saveData(dataToSave?: DatabaseState) {
+    try {
+      const data = dataToSave || this.data;
+      const dir = path.dirname(DB_FILE);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Failed to persist database file:', err);
+    }
+  }
+
+  public resetToDefault() {
+    this.data = {
+      users: initialUsers,
+      learners: initialLearners,
+      educators: initialEducators,
+      categories: initialCategories,
+      skills: initialSkills,
+      educatorSkills: initialEducatorSkills,
+      qualifications: initialQualifications,
+      portfolios: initialPortfolios,
+      verifications: initialVerifications,
+      learnerRequests: initialLearnerRequests,
+      matches: initialMatches,
+      bookings: initialBookings,
+      availability: [],
+      payments: initialPayments,
+      transactions: initialTransactions,
+      reviews: initialReviews,
+      messages: initialMessages,
+      notifications: initialNotifications,
+      adminActions: initialAdminActions
+    };
+    this.saveData();
+    return this.data;
+  }
+
+  // Generic Getters
+  public getUsers() { return this.data.users; }
+  public getLearners() { return this.data.learners; }
+  public getEducators() { return this.data.educators; }
+  public getCategories() { return this.data.categories; }
+  public getSkills() { return this.data.skills; }
+  public getEducatorSkills() { return this.data.educatorSkills; }
+  public getQualifications() { return this.data.qualifications; }
+  public getPortfolios() { return this.data.portfolios; }
+  public getVerifications() { return this.data.verifications; }
+  public getLearnerRequests() { return this.data.learnerRequests; }
+  public getMatches() { return this.data.matches; }
+  public getBookings() { return this.data.bookings; }
+  public getPayments() { return this.data.payments; }
+  public getTransactions() { return this.data.transactions; }
+  public getReviews() { return this.data.reviews; }
+  public getMessages() { return this.data.messages; }
+  public getNotifications() { return this.data.notifications; }
+  public getAdminActions() { return this.data.adminActions; }
+
+  // Specific Entity Operations
+  public findUserById(id: string) {
+    return this.data.users.find(u => u.id === id);
+  }
+
+  public findUserByEmail(email: string) {
+    return this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  public createUser(user: User) {
+    this.data.users.push(user);
+    this.saveData();
+    return user;
+  }
+
+  public createLearner(learner: Learner) {
+    this.data.learners.push(learner);
+    this.saveData();
+    return learner;
+  }
+
+  public createEducator(educator: Educator) {
+    this.data.educators.push(educator);
+    this.saveData();
+    return educator;
+  }
+
+  public updateEducator(id: string, updates: Partial<Educator>) {
+    const idx = this.data.educators.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      this.data.educators[idx] = { ...this.data.educators[idx], ...updates };
+      this.saveData();
+      return this.data.educators[idx];
+    }
+    return null;
+  }
+
+  public findEducatorById(id: string) {
+    const educator = this.data.educators.find(e => e.id === id);
+    if (!educator) return null;
+    const user = this.findUserById(educator.user_id);
+    const skills = this.data.educatorSkills.filter(s => s.educator_id === educator.id);
+    const qualifications = this.data.qualifications.filter(q => q.educator_id === educator.id);
+    const portfolios = this.data.portfolios.filter(p => p.educator_id === educator.id);
+    const reviews = this.data.reviews.filter(r => r.educator_id === educator.id);
+    const verification = this.data.verifications.find(v => v.educator_id === educator.id);
+
+    return {
+      ...educator,
+      user,
+      skills,
+      qualifications,
+      portfolios,
+      reviews,
+      verification
+    };
+  }
+
+  public findEducatorByUserId(userId: string) {
+    return this.data.educators.find(e => e.user_id === userId);
+  }
+
+  public findLearnerByUserId(userId: string) {
+    return this.data.learners.find(l => l.user_id === userId);
+  }
+
+  public createLearnerRequest(req: LearnerRequest) {
+    this.data.learnerRequests.unshift(req);
+    this.saveData();
+    return req;
+  }
+
+  public updateLearnerRequest(id: string, updates: Partial<LearnerRequest>) {
+    const idx = this.data.learnerRequests.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      this.data.learnerRequests[idx] = { ...this.data.learnerRequests[idx], ...updates };
+      this.saveData();
+      return this.data.learnerRequests[idx];
+    }
+    return null;
+  }
+
+  public createMatch(match: Match) {
+    this.data.matches.unshift(match);
+    this.saveData();
+    return match;
+  }
+
+  public createBooking(booking: Booking) {
+    this.data.bookings.unshift(booking);
+    this.saveData();
+    return booking;
+  }
+
+  public updateBooking(id: string, updates: Partial<Booking>) {
+    const idx = this.data.bookings.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      this.data.bookings[idx] = { ...this.data.bookings[idx], ...updates };
+      this.saveData();
+      return this.data.bookings[idx];
+    }
+    return null;
+  }
+
+  public createPayment(payment: Payment) {
+    this.data.payments.unshift(payment);
+    this.saveData();
+    return payment;
+  }
+
+  public updatePayment(id: string, updates: Partial<Payment>) {
+    const idx = this.data.payments.findIndex(p => p.id === id);
+    if (idx !== -1) {
+      this.data.payments[idx] = { ...this.data.payments[idx], ...updates, updated_at: new Date().toISOString() };
+      this.saveData();
+      return this.data.payments[idx];
+    }
+    return null;
+  }
+
+  public createTransaction(tx: Transaction) {
+    this.data.transactions.unshift(tx);
+    this.saveData();
+    return tx;
+  }
+
+  public createReview(review: Review) {
+    this.data.reviews.unshift(review);
+    
+    // Update educator rating & count
+    const educator = this.data.educators.find(e => e.id === review.educator_id);
+    if (educator) {
+      const allEducatorReviews = this.data.reviews.filter(r => r.educator_id === educator.id);
+      const avg = allEducatorReviews.reduce((sum, r) => sum + r.rating, 0) / allEducatorReviews.length;
+      educator.rating = Number(avg.toFixed(2));
+      educator.total_reviews = allEducatorReviews.length;
+    }
+
+    this.saveData();
+    return review;
+  }
+
+  public replyToReview(reviewId: string, reply: string) {
+    const review = this.data.reviews.find(r => r.id === reviewId);
+    if (review) {
+      review.educator_reply = reply;
+      this.saveData();
+      return review;
+    }
+    return null;
+  }
+
+  public createMessage(msg: Message) {
+    this.data.messages.push(msg);
+    this.saveData();
+    return msg;
+  }
+
+  public markMessagesRead(conversationId: string, userId: string) {
+    this.data.messages.forEach(m => {
+      if (m.conversation_id === conversationId && m.receiver_id === userId) {
+        m.is_read = true;
+      }
+    });
+    this.saveData();
+  }
+
+  public createNotification(notif: Notification) {
+    this.data.notifications.unshift(notif);
+    this.saveData();
+    return notif;
+  }
+
+  public markNotificationRead(id: string) {
+    const notif = this.data.notifications.find(n => n.id === id);
+    if (notif) {
+      notif.is_read = true;
+      this.saveData();
+    }
+  }
+
+  public logAdminAction(action: Omit<AdminAction, 'id' | 'created_at'>) {
+    const newAction: AdminAction = {
+      ...action,
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      created_at: new Date().toISOString()
+    };
+    this.data.adminActions.unshift(newAction);
+    this.saveData();
+    return newAction;
+  }
+
+  public addEducatorSkill(skill: EducatorSkill) {
+    this.data.educatorSkills.push(skill);
+    this.saveData();
+    return skill;
+  }
+
+  public addQualification(qual: Qualification) {
+    this.data.qualifications.push(qual);
+    this.saveData();
+    return qual;
+  }
+
+  public addPortfolio(port: Portfolio) {
+    this.data.portfolios.push(port);
+    this.saveData();
+    return port;
+  }
+
+  public addVerification(v: Verification) {
+    const idx = this.data.verifications.findIndex(item => item.educator_id === v.educator_id);
+    if (idx !== -1) {
+      this.data.verifications[idx] = v;
+    } else {
+      this.data.verifications.push(v);
+    }
+    this.saveData();
+    return v;
+  }
+
+  public updateVerification(educatorId: string, updates: Partial<Verification>) {
+    const idx = this.data.verifications.findIndex(v => v.educator_id === educatorId);
+    if (idx !== -1) {
+      this.data.verifications[idx] = { ...this.data.verifications[idx], ...updates };
+      this.saveData();
+      return this.data.verifications[idx];
+    }
+    return null;
+  }
+}
+
+export const db = new Database();

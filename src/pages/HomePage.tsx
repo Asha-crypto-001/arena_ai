@@ -1,0 +1,409 @@
+import React, { useState, useEffect } from 'react';
+import { Category, Educator, Skill } from '../types';
+import { api } from '../services/api';
+import { EducatorCard } from '../components/EducatorCard';
+import { formatUGX } from '../utils/formatters';
+import {
+  Search, ShieldCheck, CheckCircle2, ArrowRight, Star,
+  Award, Users, Briefcase, GraduationCap, MapPin, Sparkles,
+  Scissors, Code, Smartphone, Utensils, Zap, Hammer,
+  Wrench, Sprout, Camera, Palette, TrendingUp, ChevronRight, Phone
+} from 'lucide-react';
+
+interface HomePageProps {
+  setCurrentView: (view: string) => void;
+  onOpenSkillRequest: () => void;
+  onSelectCategory: (categoryId: string) => void;
+  onViewEducator: (educator: Educator) => void;
+  onRequestBooking: (educator: Educator) => void;
+}
+
+export const HomePage: React.FC<HomePageProps> = ({
+  setCurrentView,
+  onOpenSkillRequest,
+  onSelectCategory,
+  onViewEducator,
+  onRequestBooking
+}) => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [featuredEducators, setFeaturedEducators] = useState<Educator[]>([]);
+  const [popularSkills, setPopularSkills] = useState<Skill[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [howTab, setHowTab] = useState<'learners' | 'educators'>('learners');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [cats, edus, skills] = await Promise.all([
+          api.getCategories(),
+          api.getEducators({ featured: true }),
+          api.getSkills(undefined, true)
+        ]);
+        setCategories(cats);
+        setFeaturedEducators(edus);
+        setPopularSkills(skills);
+      } catch (err) {
+        console.error('Failed to load homepage data:', err);
+      }
+    };
+    loadData();
+  }, []);
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentView('find-skill');
+  };
+
+  const getCategoryIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Scissors': return <Scissors className="w-5 h-5" />;
+      case 'Code': return <Code className="w-5 h-5" />;
+      case 'Smartphone': return <Smartphone className="w-5 h-5" />;
+      case 'Utensils': return <Utensils className="w-5 h-5" />;
+      case 'Zap': return <Zap className="w-5 h-5" />;
+      case 'Hammer': return <Hammer className="w-5 h-5" />;
+      case 'Wrench': return <Wrench className="w-5 h-5" />;
+      case 'Sprout': return <Sprout className="w-5 h-5" />;
+      case 'Camera': return <Camera className="w-5 h-5" />;
+      case 'Palette': return <Palette className="w-5 h-5" />;
+      case 'TrendingUp': return <TrendingUp className="w-5 h-5" />;
+      default: return <Briefcase className="w-5 h-5" />;
+    }
+  };
+
+  return (
+    <div className="space-y-16 pb-16">
+      {/* Hero Section */}
+      <section className="relative bg-slate-900 text-white pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+        <div className="max-w-6xl mx-auto text-center space-y-6">
+          {/* Tagline Pill */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Where Skills Meet Opportunity • Founded by Ashabahebwa Hassan</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-4xl mx-auto leading-tight">
+            Learn Practical Skills From People Who Know Them.
+          </h1>
+
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            iSkillLink connects learners across Mbarara, Greater Ankole, and Uganda with verified educators, master artisans, trainers, and seasoned practitioners for hands-on vocational, creative, and technical mastery.
+          </p>
+
+          {/* Quick Search Bar */}
+          <div className="max-w-2xl mx-auto pt-2">
+            <form
+              onSubmit={handleHeroSearch}
+              className="bg-white p-2 rounded-2xl shadow-xl flex flex-col sm:flex-row items-center gap-2 border border-slate-200"
+            >
+              <div className="flex-1 flex items-center gap-2 px-3 w-full text-gray-800">
+                <Search className="w-5 h-5 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="What practical skill do you want to learn? (e.g. Tailoring, Solar, Python, Dairy...)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full text-xs sm:text-sm py-2 text-gray-900 focus:outline-none bg-transparent"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 shadow-md"
+              >
+                <span>Find an Educator</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+
+          {/* CTAs */}
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-4 text-xs">
+            <button
+              onClick={() => setCurrentView('find-skill')}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow"
+            >
+              Find a Skill
+            </button>
+            <button
+              onClick={() => setCurrentView('become-educator')}
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold border border-slate-700 transition"
+            >
+              Teach on iSkillLink
+            </button>
+            <button
+              onClick={onOpenSkillRequest}
+              className="px-5 py-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 transition"
+            >
+              Submit Custom Request
+            </button>
+          </div>
+
+          {/* Trust Highlights */}
+          <div className="pt-8 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left max-w-4xl mx-auto">
+            <div className="flex items-start gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-slate-100">100% Vetted Identity</div>
+                <div className="text-[11px] text-slate-400">National ID & Trade checks</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-slate-100">Escrow Protected</div>
+                <div className="text-[11px] text-slate-400">MTN & Airtel MoMo holding</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-slate-100">Based in Mbarara</div>
+                <div className="text-[11px] text-slate-400">Serving Uganda nationwide</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Award className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-slate-100">Rule-Based Match</div>
+                <div className="text-[11px] text-slate-400">Skill, budget & proximity</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Skill Categories Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+              Explore By Trade & Discipline
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
+              Skill Categories
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Discover experienced practitioners across vocational, creative, agricultural, and technical trades.
+            </p>
+          </div>
+          <button
+            onClick={() => setCurrentView('find-skill')}
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+          >
+            <span>View All Trades</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => onSelectCategory(cat.id)}
+              className="p-4 rounded-xl border border-gray-200 bg-white hover:border-emerald-600 hover:shadow-sm text-left transition group flex flex-col justify-between"
+            >
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:bg-emerald-700 group-hover:text-white transition">
+                {getCategoryIcon(cat.icon_name)}
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-emerald-800 transition">
+                  {cat.name}
+                </h3>
+                <p className="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-snug">
+                  {cat.description}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="bg-gray-50 border-y border-gray-200 py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div className="text-center space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+              Clear & Transparent Workflow
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+              How iSkillLink Works
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600 max-w-xl mx-auto">
+              We do not teach the skills ourselves. We verify masters, facilitate structured matching, protect payments, and ensure hands-on learning occurs safely.
+            </p>
+
+            {/* Switch Tabs */}
+            <div className="inline-flex p-1 bg-white rounded-xl border border-gray-200 text-xs font-bold shadow-sm">
+              <button
+                onClick={() => setHowTab('learners')}
+                className={`px-5 py-2 rounded-lg transition ${
+                  howTab === 'learners' ? 'bg-emerald-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                For Students & Apprentices
+              </button>
+              <button
+                onClick={() => setHowTab('educators')}
+                className={`px-5 py-2 rounded-lg transition ${
+                  howTab === 'educators' ? 'bg-emerald-700 text-white shadow' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                For Educators & Artisans
+              </button>
+            </div>
+          </div>
+
+          {howTab === 'learners' ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4">
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center">
+                  1
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Discover or Request</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Browse verified educators by trade, location, and rate, or submit your custom learning goal.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center">
+                  2
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Rule-Based Match</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Get matched based on proximity, format (in-person workshop or online), schedule, and budget.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center">
+                  3
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Escrow Protection</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Pay securely via MTN or Airtel MoMo. Funds remain in escrow until training milestones are delivered.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center">
+                  4
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Mastery & Review</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Complete your hands-on practical sessions, build real projects, and leave verified feedback.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4">
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-black flex items-center justify-center">
+                  1
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Apply & Verify Identity</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Submit your national ID, trade qualifications, and workshop location for verification.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-black flex items-center justify-center">
+                  2
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Set UGX Rates</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Define your hourly or course package pricing, availability, and practical workshop equipment.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-black flex items-center justify-center">
+                  3
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Accept Learner Bookings</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Review student goals, confirm schedules, and mentor apprentices in your workshop or online.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2 relative">
+                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-black flex items-center justify-center">
+                  4
+                </span>
+                <h3 className="font-bold text-gray-900 text-sm">Guaranteed Payouts</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Receive 90% of the session fee directly to your Mobile Money account upon milestone completion.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Featured Verified Educators */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+              Vetted Artisans & Practitioners
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
+              Featured Verified Educators
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Identity verified, workshop inspected, and highly rated by previous apprentices.
+            </p>
+          </div>
+          <button
+            onClick={() => setCurrentView('find-skill')}
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+          >
+            <span>Browse All Verified Mentors</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredEducators.slice(0, 6).map(edu => (
+            <EducatorCard
+              key={edu.id}
+              educator={edu}
+              onViewProfile={onViewEducator}
+              onRequestBooking={onRequestBooking}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Educator CTA Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-emerald-800 rounded-3xl p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-3 max-w-xl">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Are you a skilled artisan, professional, or craftsperson?
+            </h2>
+            <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed">
+              Monetize your practical expertise. Share real-world skills with motivated learners across Mbarara and Uganda, set your own UGX rates, and receive guaranteed payouts.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <button
+              onClick={() => setCurrentView('become-educator')}
+              className="px-6 py-3 rounded-xl bg-white hover:bg-gray-100 text-emerald-900 font-bold text-xs sm:text-sm transition shadow"
+            >
+              Apply to Teach
+            </button>
+            <button
+              onClick={() => setCurrentView('how-it-works')}
+              className="px-6 py-3 rounded-xl bg-emerald-900/60 hover:bg-emerald-900 text-white font-bold text-xs sm:text-sm border border-emerald-700 transition"
+            >
+              Educator Standards
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};

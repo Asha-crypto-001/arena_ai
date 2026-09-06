@@ -1,0 +1,599 @@
+import React, { useState, useEffect } from 'react';
+import { Booking, LearnerRequest, Payment, Review, Message, Educator } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import { formatUGX, formatShortDate, getStatusBadgeClass } from '../utils/formatters';
+import { SimulatePaymentModal } from '../components/SimulatePaymentModal';
+import { ReviewModal } from '../components/ReviewModal';
+import {
+  BookOpen, Calendar, Clock, CreditCard, MessageSquare,
+  Award, Star, User, Settings, CheckCircle2, AlertCircle,
+  PlusCircle, ArrowRight, ShieldCheck, ExternalLink, Send
+} from 'lucide-react';
+
+interface LearnerDashboardProps {
+  onOpenSkillRequest: () => void;
+  onViewEducator: (educator: Educator) => void;
+}
+
+export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
+  onOpenSkillRequest,
+  onViewEducator
+}) => {
+  const { user, learnerProfile } = useAuth();
+  const learnerId = learnerProfile?.id || (user?.role === 'learner' ? 'lrn-1' : 'lrn-1');
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'bookings' | 'payments' | 'messages' | 'reviews' | 'profile'>('overview');
+  const [requests, setRequests] = useState<LearnerRequest[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessageText, setNewMessageText] = useState('');
+  const [selectedRecipientId, setSelectedRecipientId] = useState('usr-edu-1');
+  const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
+  const [reviewModalBooking, setReviewModalBooking] = useState<Booking | null>(null);
+
+  const loadLearnerData = async () => {
+    try {
+      setLoading(true);
+      const [reqs, bks, pays, msgs] = await Promise.all([
+        api.getLearnerRequests({ learner_id: learnerId }),
+        api.getBookings({ learner_id: learnerId }),
+        api.getPayments({ learner_id: learnerId }),
+        api.getMessages(user?.id || 'usr-learner-1')
+      ]);
+
+      setRequests(reqs);
+      setBookings(bks);
+      setPayments(pays);
+      setMessages(msgs);
+    } catch (err) {
+      console.error('Error loading learner dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLearnerData();
+  }, [learnerId, user?.id]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessageText.trim() || !user) return;
+
+    try {
+      const msg = await api.sendMessage(user.id, selectedRecipientId, newMessageText);
+      setMessages(prev => [...prev, msg]);
+      setNewMessageText('');
+    } catch (e) {
+      console.error('Failed to send message:', e);
+    }
+  };
+
+  const handleMarkSessionComplete = async (bookingId: string) => {
+    try {
+      await api.updateBookingStatus(bookingId, 'completed');
+      loadLearnerData();
+    } catch (e) {
+      console.error('Error completing session:', e);
+    }
+  };
+
+  const activeBookingsCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length;
+  const completedSessionsCount = bookings.filter(b => b.status === 'completed').length;
+  const totalInvestedUGX = payments
+    .filter(p => p.status === 'paid' || p.status === 'completed')
+    .reduce((sum, p) => sum + p.amount_ugx, 0);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Top Banner with Persona Profile */}
+      <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <img
+            src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+            alt={user?.name}
+            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">
+                Learner Portal
+              </span>
+              <span className="text-xs text-slate-400">{user?.location || 'Mbarara City, Uganda'}</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1">
+              Welcome back, {user?.name}
+            </h1>
+            <p className="text-xs text-slate-300 mt-0.5 max-w-md">
+              {learnerProfile?.bio || 'Track your practical apprenticeships, manage verified bookings, and communicate with educators.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={onOpenSkillRequest}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center justify-center gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Request New Skill</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm overflow-x-auto flex space-x-1">
+        {[
+          { id: 'overview', label: 'Overview', icon: BookOpen },
+          { id: 'requests', label: `My Requests (${requests.length})`, icon: Clock },
+          { id: 'bookings', label: `Bookings (${bookings.length})`, icon: Calendar },
+          { id: 'payments', label: `Payments & Escrow (${payments.length})`, icon: CreditCard },
+          { id: 'messages', label: `Messages`, icon: MessageSquare },
+          { id: 'profile', label: 'Profile Settings', icon: User }
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-emerald-700 text-white shadow'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* TAB CONTENT: OVERVIEW */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
+              <div className="text-xs text-gray-500 font-semibold">Active Bookings</div>
+              <div className="text-2xl font-black text-gray-900">{activeBookingsCount}</div>
+              <div className="text-[11px] text-emerald-700 font-medium">Scheduled & in progress</div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
+              <div className="text-xs text-gray-500 font-semibold">Completed Sessions</div>
+              <div className="text-2xl font-black text-gray-900">{completedSessionsCount}</div>
+              <div className="text-[11px] text-emerald-700 font-medium">Verified practical milestones</div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
+              <div className="text-xs text-gray-500 font-semibold">Active Skill Requests</div>
+              <div className="text-2xl font-black text-gray-900">{requests.length}</div>
+              <div className="text-[11px] text-blue-700 font-medium">In matching pool</div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
+              <div className="text-xs text-gray-500 font-semibold">Total Escrow Volume</div>
+              <div className="text-xl font-black text-gray-900">{formatUGX(totalInvestedUGX)}</div>
+              <div className="text-[11px] text-emerald-700 font-medium">Protected by iSkillLink Escrow</div>
+            </div>
+          </div>
+
+          {/* Upcoming Sessions Section */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                Upcoming & Active Sessions
+              </h3>
+              <button
+                onClick={() => setActiveTab('bookings')}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800"
+              >
+                View all bookings
+              </button>
+            </div>
+
+            {bookings.length > 0 ? (
+              <div className="space-y-3">
+                {bookings.slice(0, 3).map(b => (
+                  <div
+                    key={b.id}
+                    className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 text-sm">{b.skill_name}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize ${getStatusBadgeClass(b.status)}`}>
+                          {b.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 flex flex-wrap items-center gap-3 mt-1">
+                        <span>Educator: <strong className="text-gray-800">{b.educator?.user?.name || 'Joseph Mukasa'}</strong></span>
+                        <span>•</span>
+                        <span>{formatShortDate(b.scheduled_date)} at {b.start_time}</span>
+                        <span>•</span>
+                        <span>{b.duration_hours} hrs</span>
+                        <span>•</span>
+                        <span className="capitalize">{b.format}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {b.status === 'pending' && (
+                        <button
+                          onClick={() => setPaymentModalBooking(b)}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs"
+                        >
+                          Deposit to Escrow
+                        </button>
+                      )}
+                      {b.status === 'confirmed' && (
+                        <button
+                          onClick={() => handleMarkSessionComplete(b.id)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+                        >
+                          Mark Session Done
+                        </button>
+                      )}
+                      {b.status === 'completed' && !b.review && (
+                        <button
+                          onClick={() => setReviewModalBooking(b)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1"
+                        >
+                          <Star className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Leave Review</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 text-xs">
+                No active bookings yet. Browse educators to book a practical learning session.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: MY REQUESTS */}
+      {activeTab === 'requests' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Submitted Skill Requests</h2>
+              <p className="text-xs text-gray-500">Custom requests evaluated by our rule-based matching algorithm.</p>
+            </div>
+            <button
+              onClick={onOpenSkillRequest}
+              className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 shadow"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>New Request</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {requests.map(req => (
+              <div
+                key={req.id}
+                className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 text-base">{req.skill_name}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize ${getStatusBadgeClass(req.status)}`}>
+                        {req.status}
+                      </span>
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                        {req.skill_level}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">{req.learning_goal}</p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-black text-gray-900">{formatUGX(req.budget_ugx)}</div>
+                    <div className="text-[11px] text-gray-500 font-medium">Budget Allocation</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-gray-50 p-3 rounded-lg text-gray-600">
+                  <div><strong>Format:</strong> <span className="capitalize">{req.format_preference}</span></div>
+                  <div><strong>Location:</strong> {req.location}</div>
+                  <div><strong>Schedule:</strong> {req.preferred_schedule}</div>
+                  <div><strong>Frequency:</strong> {req.frequency}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: BOOKINGS */}
+      {activeTab === 'bookings' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">All Scheduled Learning Bookings</h2>
+            <p className="text-xs text-gray-500">Track milestones, payment status, and completion records.</p>
+          </div>
+
+          <div className="space-y-4">
+            {bookings.map(b => (
+              <div
+                key={b.id}
+                className="p-5 rounded-xl border border-gray-200 bg-white space-y-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900 text-base">{b.skill_name}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize ${getStatusBadgeClass(b.status)}`}>
+                        {b.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Mentor: <strong className="text-gray-900">{b.educator?.user?.name || 'Joseph Mukasa'}</strong> ({b.educator?.title})
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-base font-black text-gray-900">{formatUGX(b.total_amount_ugx)}</div>
+                    <div className="text-[11px] text-emerald-700 font-semibold">
+                      {b.payment?.status === 'paid' ? 'Paid in Escrow' : b.payment?.status === 'completed' ? 'Disbursed on Completion' : 'Payment Pending'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>Practical Milestone Progress:</span>
+                    <span className="font-bold">{b.milestone_progress}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                      style={{ width: `${b.milestone_progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Details grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-gray-50 p-3 rounded-lg text-gray-600">
+                  <div><strong>Date & Time:</strong> {formatShortDate(b.scheduled_date)} at {b.start_time}</div>
+                  <div><strong>Format:</strong> <span className="capitalize">{b.format}</span></div>
+                  <div><strong>Location:</strong> {b.location_or_link}</div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+                  {b.status === 'pending' && (
+                    <button
+                      onClick={() => setPaymentModalBooking(b)}
+                      className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Deposit via Mobile Money</span>
+                    </button>
+                  )}
+
+                  {b.status === 'confirmed' && (
+                    <button
+                      onClick={() => handleMarkSessionComplete(b.id)}
+                      className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Mark Session Completed</span>
+                    </button>
+                  )}
+
+                  {b.status === 'completed' && !b.review && (
+                    <button
+                      onClick={() => setReviewModalBooking(b)}
+                      className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5"
+                    >
+                      <Star className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Write Review</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: PAYMENTS & ESCROW */}
+      {activeTab === 'payments' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Escrow Payments & Transactions Ledger</h2>
+            <p className="text-xs text-gray-500">Every shilling is held safely in escrow until your training is completed.</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-700 uppercase font-bold border-y border-gray-200">
+                <tr>
+                  <th className="p-3">Reference</th>
+                  <th className="p-3">Session / Educator</th>
+                  <th className="p-3">Amount (UGX)</th>
+                  <th className="p-3">Method</th>
+                  <th className="p-3">Escrow Status</th>
+                  <th className="p-3">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-700">
+                {payments.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50/50">
+                    <td className="p-3 font-mono font-semibold text-gray-900">{p.payment_reference}</td>
+                    <td className="p-3">
+                      Booking #{p.booking_id}
+                    </td>
+                    <td className="p-3 font-bold text-gray-900">{formatUGX(p.amount_ugx)}</td>
+                    <td className="p-3 uppercase font-semibold text-emerald-800">{p.method.replace('_', ' ')}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded border font-bold capitalize ${getStatusBadgeClass(p.status)}`}>
+                        {p.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="p-3 text-gray-500">{formatShortDate(p.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: MESSAGES */}
+      {activeTab === 'messages' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Direct In-App Messages</h2>
+            <p className="text-xs text-gray-500">Communicate with your assigned educators and plan workshop visits.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Contacts list */}
+            <div className="space-y-2 border-r border-gray-100 pr-4">
+              <div className="text-xs font-bold text-gray-700 uppercase mb-2">Educators</div>
+              {[
+                { id: 'usr-edu-1', name: 'Joseph Mukasa', role: 'Master Tailor (Kiyembe)' },
+                { id: 'usr-edu-2', name: 'Dr. Irene Kembabazi', role: 'Full-Stack Mentor' }
+              ].map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedRecipientId(c.id)}
+                  className={`w-full p-3 rounded-xl text-left text-xs transition border flex items-center justify-between ${
+                    selectedRecipientId === c.id
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div>
+                    <div className="font-bold text-gray-900">{c.name}</div>
+                    <div className="text-[11px] text-gray-500">{c.role}</div>
+                  </div>
+                  {selectedRecipientId === c.id && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Message Thread */}
+            <div className="md:col-span-2 flex flex-col h-96 border border-gray-200 rounded-xl overflow-hidden bg-gray-50/50">
+              <div className="p-3 bg-white border-b border-gray-200 text-xs font-bold text-gray-800">
+                Conversation
+              </div>
+
+              <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {messages.length > 0 ? (
+                  messages.map(m => {
+                    const isMe = m.sender_id === user?.id;
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs p-3 rounded-2xl text-xs leading-relaxed ${
+                            isMe
+                              ? 'bg-emerald-700 text-white rounded-br-none'
+                              : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                          }`}
+                        >
+                          {m.content}
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-0.5 px-1">
+                          {formatShortDate(m.created_at)}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-12 text-xs text-gray-400">
+                    No messages in this thread yet. Send a message to start!
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-200 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 text-xs p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+                <button
+                  type="submit"
+                  className="p-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: PROFILE */}
+      {activeTab === 'profile' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-2xl">
+          <h2 className="text-base font-bold text-gray-900">Learner Profile Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Full Name</label>
+              <input type="text" value={user?.name} disabled className="w-full p-2.5 rounded-lg border bg-gray-50 text-gray-700" />
+            </div>
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Email</label>
+              <input type="text" value={user?.email} disabled className="w-full p-2.5 rounded-lg border bg-gray-50 text-gray-700" />
+            </div>
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Phone</label>
+              <input type="text" value={user?.phone} disabled className="w-full p-2.5 rounded-lg border bg-gray-50 text-gray-700" />
+            </div>
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Primary Learning Area</label>
+              <input type="text" value={user?.location || learnerProfile?.location || 'Mbarara City, Uganda'} disabled className="w-full p-2.5 rounded-lg border bg-gray-50 text-gray-700" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {paymentModalBooking && (
+        <SimulatePaymentModal
+          booking={paymentModalBooking}
+          onClose={() => setPaymentModalBooking(null)}
+          onPaymentSuccess={() => {
+            setPaymentModalBooking(null);
+            loadLearnerData();
+          }}
+        />
+      )}
+
+      {reviewModalBooking && (
+        <ReviewModal
+          booking={reviewModalBooking}
+          onClose={() => setReviewModalBooking(null)}
+          onReviewSuccess={() => {
+            setReviewModalBooking(null);
+            loadLearnerData();
+          }}
+        />
+      )}
+    </div>
+  );
+};
