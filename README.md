@@ -1,12 +1,12 @@
 # iSkillLink ("Where Skills Meet Opportunity")
-**Headquarters: Mbarara City, Western Uganda**  
-**Founder & Primary Platform Administrator: Ashabahebwa Hassan**  
+**Headquarters: Mbarara City, Western Region, Uganda**  
+**Founder & Platform Administrator: Ashabahebwa Hassan**  
 **Official Contacts:** WhatsApp: `+256 744 024 529` | Phone: `+256 772 233 621` | Email: `ashabahebwahassan665@gmail.com`
 
 ---
 
 ## 🌟 Overview
-**iSkillLink** is a production-grade practical skills marketplace built specifically for Uganda. It bridges the gap between experienced local artisans, technicians, and domain experts and motivated learners who want hands-on practical apprenticeships.
+**iSkillLink** is a production-grade practical skills marketplace built for Uganda. It connects experienced local artisans, master technicians, and vocational instructors with motivated learners for direct hands-on apprenticeships.
 
 Unlike passive video courses, iSkillLink focuses on **direct 1-on-1 and small group practical mentorship**, workshop safety inspections, transparent rule-based matching, and **Mobile Money Escrow (MTN MoMo & Airtel Money)** that protects both learners and educators.
 
@@ -14,9 +14,9 @@ Unlike passive video courses, iSkillLink focuses on **direct 1-on-1 and small gr
 
 ## 🚀 Key Features
 
-### 1. Separate Real User Roles & Dashboards
+### 1. Separate Real User Roles & Portals
 - **Founder / Platform Admin (Ashabahebwa Hassan)**:
-  - Multi-step verification queue (NIN validation, trade background checks, screening interviews, workshop bench inspections).
+  - Multi-step verification queue (NIN validation with Ugandan records, trade background checks, screening interviews, workshop bench inspections).
   - Rule-based matching engine oversight (35% skill fit, 20% format, 15% proximity, 15% budget, 15% rating).
   - Platform escrow ledger managing 10% platform facilitation fee and 90% net educator payouts.
   - Comprehensive immutable audit trail.
@@ -47,41 +47,74 @@ Unlike passive video courses, iSkillLink focuses on **direct 1-on-1 and small gr
 
 ---
 
-## 🔑 Default Platform Credentials
+## 🔒 Security & User Accounts
 
-| Role | Name | Email | Password | Phone |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin & Founder** | **Ashabahebwa Hassan** | `ashabahebwahassan665@gmail.com` | `admin123` | `+256 744 024 529` / `+256 772 233 621` |
-| **Verified Educator** | Joseph Mukasa (Master Tailor) | `mukasa.tailor@iskilllink.ug` | `edu123` | `+256 774 521 300` |
-| **Learner / Student** | Sarah Namubiru | `sarah.namubiru@gmail.com` | `learner123` | `+256 701 455 890` |
+For security, credentials are managed securely via environment variables:
 
-*Note: Any user can also register a new real Educator or Learner account with instant access.*
-
----
-
-## 🛠️ Tech Stack & Architecture
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Lucide Icons, Vite
-- **Backend API**: Node.js, Express, TypeScript (`tsx`), CORS, JSON file-persisted database
-- **Storage**: In-memory store with atomic JSON persistence (`server/data/iskilllink_db.json`)
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Set your custom administrative credentials in `.env`:
+   ```env
+   ADMIN_EMAIL=ashabahebwahassan665@gmail.com
+   ADMIN_PASSWORD=your_secure_password_here
+   ```
+3. New students, educators, and mentors can register directly in the application using the **Create New Account** form on the Sign In page.
 
 ---
 
-## 💻 Local Development Setup
+## 🌐 How to Run the Frontend in GitHub
+
+### Option 1: Automatic GitHub Pages Deployment (Included in this repo)
+This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that builds and hosts your frontend directly on GitHub:
+
+1. In your GitHub repository (`Asha-crypto-001/arena_ai`), go to **Settings** $\rightarrow$ **Pages** (in the left sidebar).
+2. Under **Build and deployment** $\rightarrow$ **Source**, select **GitHub Actions**.
+3. Whenever you push to `main`, GitHub will automatically build and publish your frontend at:
+   ```
+   https://Asha-crypto-001.github.io/arena_ai/
+   ```
+
+---
+
+### Option 2: 1-Click Free Deployment on Vercel / Netlify / Render (Recommended for Full-Stack)
+To run both the React frontend and the Express backend live with a public URL:
+
+#### Deploying on Vercel:
+1. Go to **[vercel.com](https://vercel.com)** and sign in with your GitHub account (`Asha-crypto-001`).
+2. Click **Add New Project** $\rightarrow$ Import **`arena_ai`**.
+3. Click **Deploy**. Vercel will automatically build and give you a live production URL (e.g. `https://iskilllink.vercel.app`).
+
+#### Deploying on Render (Frontend + Backend):
+1. Go to **[render.com](https://render.com)** and sign in with GitHub.
+2. Create a **Web Service**, select `Asha-crypto-001/arena_ai`.
+3. Set Build Command: `npm install && npm run build`
+4. Set Start Command: `npm run server`
+5. Click **Deploy**.
+
+---
+
+## 💻 Running Locally on Your Computer
 
 ```bash
-# 1. Install dependencies
+# 1. Clone your repository from GitHub
+git clone https://github.com/Asha-crypto-001/arena_ai.git
+cd arena_ai
+
+# 2. Install dependencies
 npm install
 
-# 2. Run both the Express API (Port 3001) and Vite App (Port 3000)
+# 3. Start development server (Port 3000 for Web, Port 3001 for API)
 npm run dev
 
-# 3. Build for production
-npm run build
+# 4. Open in your browser:
+# http://localhost:3000
 ```
 
 ---
 
 ## 📍 Company & Operational Office
 - **Location**: Mbarara City, Western Region, Uganda
-- **Leadership**: Ashabahebwa Hassan (Founder & Platform Administrator)
-- **Support**: `ashabahebwahassan665@gmail.com` | WhatsApp: `+256 744 024 529`
+- **Founder & Administrator**: Ashabahebwa Hassan
+- **Support**: `ashabahebwahassan665@gmail.com` | WhatsApp: `+256 744 024 529` | Phone: `+256 772 233 621`

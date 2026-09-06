@@ -55,19 +55,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const fillAdminCredentials = () => {
     setMode('login');
     setEmail('ashabahebwahassan665@gmail.com');
-    setPassword('admin123');
+    setPassword('');
   };
 
   const fillEducatorCredentials = () => {
     setMode('login');
     setEmail('mukasa.tailor@iskilllink.ug');
-    setPassword('edu123');
+    setPassword('');
   };
 
   const fillLearnerCredentials = () => {
     setMode('login');
     setEmail('sarah.namubiru@gmail.com');
-    setPassword('learner123');
+    setPassword('');
   };
 
   return (

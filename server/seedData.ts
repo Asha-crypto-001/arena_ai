@@ -53,8 +53,8 @@ export const initialUsers: User[] = [
   // Founder & Primary Admin
   {
     id: 'usr-admin-ashabahebwa',
-    email: 'ashabahebwahassan665@gmail.com',
-    password_hash: 'admin123',
+    email: process.env.ADMIN_EMAIL || 'ashabahebwahassan665@gmail.com',
+    password_hash: process.env.ADMIN_PASSWORD || 'admin123',
     role: 'admin',
     name: 'Ashabahebwa Hassan',
     phone: '+256 744 024 529',
