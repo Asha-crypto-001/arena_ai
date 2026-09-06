@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   ShieldCheck, Bell, ChevronDown, User, LogOut, CheckCircle2,
   Menu, X, Sparkles, Briefcase, GraduationCap, ArrowRight,
-  Settings, MessageSquare, PlusCircle, Phone, Mail, Camera
+  Settings, MessageSquare, PlusCircle, Phone, Mail, Camera,
+  MapPin, Compass, ExternalLink, UserCheck
 } from 'lucide-react';
 import { ProfilePhotoUploadModal } from './ProfilePhotoUploadModal';
 
@@ -28,9 +29,21 @@ export const Navbar: React.FC<NavbarProps> = ({
     markNotificationAsRead
   } = useAuth();
 
-  const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getDashboardTarget = () => {
     if (user?.role === 'admin') return 'admin-dashboard';
@@ -39,270 +52,333 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const getDashboardLabel = () => {
-    if (user?.role === 'admin') return 'Admin Portal';
+    if (user?.role === 'admin') return 'Admin Dashboard';
     if (user?.role === 'educator') return 'Educator Portal';
-    return 'Learner Portal';
+    return 'Learner Dashboard';
   };
+
+  const navLinks = [
+    { id: 'find-skill', label: 'Explore Skills' },
+    { id: 'become-educator', label: 'Teach on iSkill' },
+    { id: 'how-it-works', label: 'How It Works' },
+    { id: 'about', label: 'About Us' },
+    { id: 'contact', label: 'Contact' }
+  ];
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        {/* Top Contact & Location Bar */}
-        <div className="bg-slate-900 text-slate-200 text-xs py-1.5 px-4 sm:px-8 flex flex-wrap items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              iSkillLink Uganda (HQ: Mbarara City)
-            </span>
-            <span className="hidden md:inline text-slate-500">•</span>
-            <span className="hidden md:inline text-slate-300">
-              Founded by Ashabahebwa Hassan
-            </span>
-          </div>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/90 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] transition-all">
+        {/* Heritage Ribbon (Nostalgic Top Tape) */}
+        <div className="bg-[#101b17] text-stone-300 text-[11px] py-1 px-4 sm:px-8 border-b border-[#1c2e27] tracking-normal">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            {/* Heritage Registry Origin */}
+            <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+              <span className="inline-flex items-center gap-1.5 text-amber-400 font-semibold uppercase text-[10px] tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                iSkillLink Uganda
+              </span>
+              <span className="text-stone-600 hidden sm:inline">•</span>
+              <span className="text-stone-300 hidden sm:inline text-[11px]">
+                HQ: Mbarara City
+              </span>
+              <span className="text-stone-600 hidden md:inline">•</span>
+              <span className="text-stone-400 hidden md:inline text-[11px]">
+                Founded by Ashabahebwa Hassan
+              </span>
+            </div>
 
-          {/* Official contacts */}
-          <div className="flex items-center gap-4 text-[11px] text-slate-300">
-            <a
-              href="https://wa.me/256744024529"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-emerald-400 transition flex items-center gap-1"
-            >
-              <Phone className="w-3 h-3 text-emerald-400" />
-              <span>+256 744 024 529</span>
-            </a>
-            <span className="hidden sm:inline text-slate-600">/</span>
-            <a
-              href="tel:+256772233621"
-              className="hidden sm:inline hover:text-emerald-400 transition"
-            >
-              +256 772 233 621
-            </a>
-            <span className="hidden lg:inline text-slate-600">|</span>
-            <a
-              href="mailto:ashabahebwahassan665@gmail.com"
-              className="hidden lg:inline hover:text-emerald-400 transition"
-            >
-              ashabahebwahassan665@gmail.com
-            </a>
+            {/* Quick Contact & WhatsApp hotline */}
+            <div className="flex items-center gap-3 text-[11px] shrink-0 font-medium text-stone-300">
+              <a
+                href="https://wa.me/256744024529"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-300 transition flex items-center gap-1 text-emerald-400"
+              >
+                <Phone className="w-3 h-3" />
+                <span className="text-stone-200 hover:text-amber-300">+256 744 024 529</span>
+              </a>
+              <span className="text-stone-700 hidden lg:inline">|</span>
+              <a
+                href="tel:+256772233621"
+                className="hidden lg:inline hover:text-amber-300 transition text-stone-400"
+              >
+                +256 772 233 621
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Main Navigation */}
+        {/* Main Navigation Bar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCurrentView('home')}
-                className="flex items-center gap-2.5 text-left focus:outline-none group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-black text-xl tracking-tight shadow-sm group-hover:bg-emerald-800 transition">
+          <div className="flex items-center justify-between h-16 sm:h-[68px]">
+            {/* Brand Logo & Seal */}
+            <button
+              onClick={() => setCurrentView('home')}
+              className="flex items-center gap-3 text-left focus:outline-none group shrink-0"
+            >
+              {/* Nostalgic Guild Shield Monogram */}
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0c392b] to-[#06241a] border border-[#1e5c46] text-amber-400 flex items-center justify-center font-serif font-black text-xl tracking-tight shadow-sm group-hover:scale-[1.02] transition">
                   iS
                 </div>
-                <div>
-                  <div className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
-                    iSkillLink
-                    <span className="text-[10px] uppercase font-bold tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
-                      UG
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 font-medium tracking-tight">
-                    Where Skills Meet Opportunity
-                  </div>
+                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900"></span>
                 </div>
-              </button>
-            </div>
+              </div>
 
-            {/* Desktop Nav Items */}
-            <nav className="hidden lg:flex items-center space-x-1">
-              <button
-                onClick={() => setCurrentView('find-skill')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                  currentView === 'find-skill' ? 'text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:text-slate-900 hover:bg-gray-50'
-                }`}
-              >
-                Find a Skill
-              </button>
+              {/* Brand Typography */}
+              <div>
+                <div className="text-lg sm:text-xl font-bold tracking-tight text-stone-900 font-serif flex items-center gap-1.5 leading-none">
+                  iSkillLink
+                  <span className="text-[9px] font-sans font-extrabold uppercase tracking-widest bg-stone-100 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300">
+                    UG
+                  </span>
+                </div>
+                <div className="text-[10px] sm:text-[11px] text-stone-500 font-medium tracking-tight mt-0.5">
+                  Where Skills Meet Opportunity
+                </div>
+              </div>
+            </button>
 
-              <button
-                onClick={() => setCurrentView('become-educator')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                  currentView === 'become-educator' ? 'text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:text-slate-900 hover:bg-gray-50'
-                }`}
-              >
-                Become an Educator
-              </button>
-
-              <button
-                onClick={() => setCurrentView('how-it-works')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                  currentView === 'how-it-works' ? 'text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:text-slate-900 hover:bg-gray-50'
-                }`}
-              >
-                How It Works
-              </button>
-
-              <button
-                onClick={() => setCurrentView('about')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                  currentView === 'about' ? 'text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:text-slate-900 hover:bg-gray-50'
-                }`}
-              >
-                About Us
-              </button>
-
-              <button
-                onClick={() => setCurrentView('contact')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                  currentView === 'contact' ? 'text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:text-slate-900 hover:bg-gray-50'
-                }`}
-              >
-                Contact
-              </button>
+            {/* Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center space-x-1 xl:space-x-2">
+              {navLinks.map((link) => {
+                const isActive = currentView === link.id;
+                return (
+                  <button
+                    key={link.id}
+                    onClick={() => setCurrentView(link.id)}
+                    className={`relative px-3.5 py-2 text-[13px] font-semibold transition-all rounded-lg ${
+                      isActive
+                        ? 'text-emerald-900 font-bold bg-emerald-50/80 shadow-xs'
+                        : 'text-stone-700 hover:text-stone-950 hover:bg-stone-100/70'
+                    }`}
+                  >
+                    {link.label}
+                    {isActive && (
+                      <span className="absolute bottom-1 left-3.5 right-3.5 h-[2px] bg-emerald-700 rounded-full"></span>
+                    )}
+                  </button>
+                );
+              })}
             </nav>
 
-            {/* Right Action Area */}
-            <div className="hidden sm:flex items-center space-x-3">
-              {/* Submit Skill Request CTA Button */}
+            {/* Right Side Actions Area */}
+            <div className="hidden sm:flex items-center gap-3">
+              {/* Custom Skill Request Shortcut */}
               <button
                 onClick={onOpenSkillRequest}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300 transition"
+                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-100 hover:bg-stone-200/80 text-stone-800 border border-stone-300/80 transition"
               >
-                <PlusCircle className="w-4 h-4 text-emerald-700" />
-                <span>Request a Custom Skill</span>
+                <PlusCircle className="w-3.5 h-3.5 text-emerald-800" />
+                <span>Custom Request</span>
               </button>
 
               {user ? (
-                <>
-                  {/* Notifications Popover */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowNotifMenu(!showNotifMenu)}
-                      className="p-2 rounded-lg text-gray-600 hover:text-slate-900 hover:bg-gray-100 relative transition"
-                      title="Notifications"
-                    >
-                      <Bell className="w-5 h-5" />
+                /* Unified Nostalgic User Profile Capsule */
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className={`flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border transition shadow-xs ${
+                      userDropdownOpen
+                        ? 'bg-stone-900 text-white border-stone-900 ring-2 ring-emerald-600/30'
+                        : 'bg-white hover:bg-stone-50 text-stone-800 border-stone-300'
+                    }`}
+                  >
+                    {/* User Avatar with subtle verified ring */}
+                    <div className="relative">
+                      <img
+                        src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                        alt={user.name}
+                        className="w-8 h-8 rounded-full object-cover border border-emerald-600"
+                      />
                       {unreadNotificationCount > 0 && (
-                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                          {unreadNotificationCount}
-                        </span>
+                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white"></span>
                       )}
-                    </button>
+                    </div>
 
-                    {showNotifMenu && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-3 z-50">
-                        <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
-                          <span className="font-semibold text-sm text-gray-900">Notifications</span>
-                          <span className="text-xs text-gray-500">{notifications.length} total</span>
+                    {/* Compact Name & Role Tag */}
+                    <div className="text-left leading-none">
+                      <div className="text-xs font-bold max-w-[110px] truncate">
+                        {user.name.split(' ')[0]}
+                      </div>
+                      <div className={`text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
+                        userDropdownOpen
+                          ? 'text-amber-400'
+                          : user.role === 'admin'
+                          ? 'text-amber-700'
+                          : user.role === 'educator'
+                          ? 'text-emerald-700'
+                          : 'text-stone-500'
+                      }`}>
+                        {user.role}
+                      </div>
+                    </div>
+
+                    <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu Card */}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                      {/* User Header Profile */}
+                      <div className="p-4 bg-stone-50 border-b border-stone-100 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <img
+                            src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                            alt={user.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-emerald-600 shadow-sm shrink-0"
+                          />
+                          <div className="overflow-hidden">
+                            <div className="font-bold text-xs text-stone-900 truncate">{user.name}</div>
+                            <div className="text-[11px] text-stone-500 truncate">{user.email}</div>
+                          </div>
                         </div>
 
-                        <div className="max-h-72 overflow-y-auto space-y-2">
-                          {notifications.length === 0 ? (
-                            <div className="text-xs text-gray-500 text-center py-4">No notifications yet</div>
-                          ) : (
-                            notifications.map(n => (
+                        <button
+                          onClick={() => {
+                            setShowPhotoModal(true);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="p-2 rounded-lg bg-white border border-stone-200 hover:bg-emerald-50 text-stone-700 hover:text-emerald-800 transition shrink-0"
+                          title="Change Profile Photo"
+                        >
+                          <Camera className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Menu Links */}
+                      <div className="p-2 space-y-1 text-xs">
+                        {/* Direct Portal CTA */}
+                        <button
+                          onClick={() => {
+                            setCurrentView(getDashboardTarget());
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full p-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold flex items-center justify-between transition shadow-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            {user.role === 'admin' && <Settings className="w-4 h-4 text-amber-300" />}
+                            {user.role === 'educator' && <GraduationCap className="w-4 h-4 text-emerald-300" />}
+                            {user.role === 'learner' && <User className="w-4 h-4 text-emerald-300" />}
+                            <span>{getDashboardLabel()}</span>
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            onOpenSkillRequest();
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full p-2.5 rounded-xl text-stone-700 hover:bg-stone-100 font-medium flex items-center gap-2 text-left transition"
+                        >
+                          <PlusCircle className="w-4 h-4 text-emerald-700" />
+                          <span>Submit Custom Skill Request</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowPhotoModal(true);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full p-2.5 rounded-xl text-stone-700 hover:bg-stone-100 font-medium flex items-center gap-2 text-left transition"
+                        >
+                          <Camera className="w-4 h-4 text-stone-600" />
+                          <span>Update Profile Picture</span>
+                        </button>
+                      </div>
+
+                      {/* Notifications Preview in Dropdown */}
+                      {notifications.length > 0 && (
+                        <div className="px-3 py-2 bg-stone-50/80 border-t border-stone-100">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Recent Activity</span>
+                            {unreadNotificationCount > 0 && (
+                              <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded">
+                                {unreadNotificationCount} unread
+                              </span>
+                            )}
+                          </div>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {notifications.slice(0, 2).map((n) => (
                               <div
                                 key={n.id}
                                 onClick={() => {
                                   markNotificationAsRead(n.id);
                                   setCurrentView(getDashboardTarget());
-                                  setShowNotifMenu(false);
+                                  setUserDropdownOpen(false);
                                 }}
-                                className={`p-2.5 rounded-lg text-xs cursor-pointer transition border ${
-                                  n.is_read ? 'bg-white border-gray-100 text-gray-600' : 'bg-emerald-50/60 border-emerald-200 text-gray-900 font-medium'
-                                }`}
+                                className="p-2 rounded-lg bg-white border border-stone-200 text-[11px] cursor-pointer hover:border-emerald-400 transition"
                               >
-                                <div className="font-semibold text-gray-900 flex items-center justify-between">
-                                  <span>{n.title}</span>
-                                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>}
+                                <div className="font-semibold text-stone-900 flex items-center justify-between">
+                                  <span className="truncate">{n.title}</span>
+                                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0"></span>}
                                 </div>
-                                <p className="mt-1 text-gray-600 text-[11px] leading-relaxed">{n.message}</p>
+                                <p className="text-stone-500 text-[10px] truncate mt-0.5">{n.message}</p>
                               </div>
-                            ))
-                          )}
+                            ))}
+                          </div>
                         </div>
+                      )}
+
+                      {/* Sign Out Action */}
+                      <div className="p-2 border-t border-stone-100 bg-stone-50/50">
+                        <button
+                          onClick={() => {
+                            logout();
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full p-2 rounded-lg text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-2 transition"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
+                        </button>
                       </div>
-                    )}
-                  </div>
-
-                  {/* User Profile Avatar with Click-to-Update Photo */}
-                  <div className="relative group flex items-center">
-                    <button
-                      onClick={() => setShowPhotoModal(true)}
-                      className="relative p-0.5 rounded-full ring-2 ring-emerald-600/30 hover:ring-emerald-600 transition flex items-center justify-center"
-                      title="Click to update profile photo"
-                    >
-                      <img
-                        src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                        alt={user.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
-                        <Camera className="w-3.5 h-3.5" />
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Direct Dashboard Entry */}
-                  <button
-                    onClick={() => setCurrentView(getDashboardTarget())}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg text-white shadow-sm transition ${
-                      user.role === 'admin'
-                        ? 'bg-slate-900 hover:bg-slate-800'
-                        : 'bg-emerald-700 hover:bg-emerald-800'
-                    }`}
-                  >
-                    {user.role === 'admin' && <Settings className="w-3.5 h-3.5" />}
-                    {user.role === 'educator' && <GraduationCap className="w-3.5 h-3.5" />}
-                    {user.role === 'learner' && <User className="w-3.5 h-3.5" />}
-                    <span>{getDashboardLabel()}</span>
-                  </button>
-
-                  {/* Sign Out */}
-                  <button
-                    onClick={logout}
-                    className="p-2 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </>
+                    </div>
+                  )}
+                </div>
               ) : (
+                /* Logged Out Actions: Perfectly Balanced */
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onOpenAuth('login')}
-                    className="px-3 py-2 text-xs font-semibold rounded-lg text-gray-700 hover:text-slate-900 hover:bg-gray-100 transition"
+                    className="px-3.5 py-2 text-xs font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => onOpenAuth('register')}
-                    className="px-4 py-2 text-xs font-bold rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm transition"
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white shadow-xs transition flex items-center gap-1.5"
                   >
-                    Register
+                    <span>Get Started</span>
+                    <ArrowRight className="w-3 h-3 text-amber-300" />
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Mobile hamburger */}
+            {/* Mobile Actions: Compact & Clear */}
             <div className="flex lg:hidden items-center gap-2">
               {user && (
                 <button
                   onClick={() => setShowPhotoModal(true)}
-                  className="p-0.5 rounded-full ring-1 ring-emerald-600 mr-1"
+                  className="p-0.5 rounded-full ring-2 ring-emerald-600/50"
+                  title="Update Photo"
                 >
                   <img
                     src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
                     alt={user.name}
-                    className="w-7 h-7 rounded-full object-cover"
+                    className="w-8 h-8 rounded-full object-cover"
                   />
                 </button>
               )}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                className="p-2 rounded-xl text-stone-700 hover:text-stone-900 hover:bg-stone-100 transition"
+                aria-label="Toggle navigation menu"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -310,84 +386,80 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Mobile Drawer */}
+        {/* Mobile Slide-Out Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 bg-white px-4 pt-3 pb-6 space-y-3">
+          <div className="lg:hidden border-t border-stone-200 bg-white px-4 pt-3 pb-6 space-y-4 shadow-xl">
             {user && (
-              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
+              <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <img
                     src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
                     alt={user.name}
-                    className="w-10 h-10 rounded-full object-cover border border-emerald-500"
+                    className="w-10 h-10 rounded-xl object-cover border border-emerald-600"
                   />
                   <div>
-                    <div className="font-bold text-xs text-gray-900">{user.name}</div>
-                    <div className="text-[11px] text-gray-500 capitalize">{user.role}</div>
+                    <div className="font-bold text-xs text-stone-900">{user.name}</div>
+                    <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">{user.role} Portal</div>
                   </div>
                 </div>
                 <button
                   onClick={() => { setShowPhotoModal(true); setMobileMenuOpen(false); }}
-                  className="px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-[11px] font-bold text-gray-700 flex items-center gap-1 shadow-sm"
+                  className="px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] font-bold text-stone-700 flex items-center gap-1 shadow-xs"
                 >
                   <Camera className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Update Photo</span>
+                  <span>Photo</span>
                 </button>
               </div>
             )}
 
+            {/* Navigation Links */}
             <div className="space-y-1">
-              <button
-                onClick={() => { setCurrentView('find-skill'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                Find a Skill
-              </button>
-              <button
-                onClick={() => { setCurrentView('become-educator'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                Become an Educator
-              </button>
-              <button
-                onClick={() => { setCurrentView('how-it-works'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                How It Works
-              </button>
-              <button
-                onClick={() => { setCurrentView('about'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                About Us
-              </button>
-              <button
-                onClick={() => { setCurrentView('contact'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                Contact
-              </button>
+              {navLinks.map((link) => {
+                const isActive = currentView === link.id;
+                return (
+                  <button
+                    key={link.id}
+                    onClick={() => {
+                      setCurrentView(link.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-between ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-950 border border-emerald-200'
+                        : 'text-stone-700 hover:bg-stone-50'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-700"></span>}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="pt-3 border-t border-gray-100 space-y-2">
+            {/* Mobile Actions Bottom */}
+            <div className="pt-3 border-t border-stone-100 space-y-2">
               <button
                 onClick={() => { onOpenSkillRequest(); setMobileMenuOpen(false); }}
-                className="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-gray-100 text-gray-800 text-center"
+                className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-center flex items-center justify-center gap-1.5 border border-stone-200"
               >
-                Request a Custom Skill
+                <PlusCircle className="w-4 h-4 text-emerald-700" />
+                <span>Submit Custom Skill Request</span>
               </button>
 
               {user ? (
                 <>
                   <button
                     onClick={() => { setCurrentView(getDashboardTarget()); setMobileMenuOpen(false); }}
-                    className="w-full py-2.5 px-3 text-xs font-bold rounded-lg bg-emerald-700 text-white text-center"
+                    className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-emerald-800 text-white text-center flex items-center justify-center gap-1.5"
                   >
-                    {getDashboardLabel()}
+                    {user.role === 'admin' && <Settings className="w-4 h-4 text-amber-300" />}
+                    {user.role === 'educator' && <GraduationCap className="w-4 h-4" />}
+                    {user.role === 'learner' && <User className="w-4 h-4" />}
+                    <span>Open {getDashboardLabel()}</span>
                   </button>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="w-full py-2 px-3 text-xs font-semibold rounded-lg text-rose-600 bg-rose-50 text-center"
+                    className="w-full py-2 px-3 text-xs font-bold rounded-xl text-rose-700 bg-rose-50 hover:bg-rose-100 text-center"
                   >
                     Sign Out
                   </button>
@@ -396,15 +468,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
-                    className="py-2 text-xs font-semibold rounded-lg text-gray-700 border border-gray-300 text-center"
+                    className="py-2.5 text-xs font-bold rounded-xl text-stone-800 bg-white border border-stone-300 text-center hover:bg-stone-50"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => { onOpenAuth('register'); setMobileMenuOpen(false); }}
-                    className="py-2 text-xs font-bold rounded-lg bg-emerald-700 text-white text-center"
+                    className="py-2.5 text-xs font-bold rounded-xl bg-emerald-800 text-white text-center hover:bg-emerald-900"
                   >
-                    Register
+                    Get Started
                   </button>
                 </div>
               )}
