@@ -154,7 +154,7 @@ const AppContent: React.FC = () => {
         )}
 
         {currentView === 'admin-dashboard' && (
-          user && user.role === 'admin' && user.email === 'ashabahebwahassan665@gmail.com' ? (
+          user && (user.role === 'admin' || user.role === 'secondary_admin') ? (
             <AdminDashboard />
           ) : (
             <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
@@ -165,7 +165,7 @@ const AppContent: React.FC = () => {
               </div>
               <h2 className="text-2xl font-black text-gray-900">Restricted Administrator Area</h2>
               <p className="text-xs text-gray-600 leading-relaxed">
-                This operations portal is private and restricted strictly to Founder & Platform Administrator <strong>Ashabahebwa Hassan</strong>.
+                This operations portal is private and restricted strictly to Founder <strong>Ashabahebwa Hassan</strong> and authorized secondary administrators.
               </p>
               <div className="pt-2">
                 <button

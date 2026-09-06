@@ -46,13 +46,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const getDashboardTarget = () => {
-    if (user?.role === 'admin') return 'admin-dashboard';
+    if (user?.role === 'admin' || user?.role === 'secondary_admin') return 'admin-dashboard';
     if (user?.role === 'educator') return 'educator-dashboard';
     return 'learner-dashboard';
   };
 
   const getDashboardLabel = () => {
-    if (user?.role === 'admin') return 'Admin Dashboard';
+    if (user?.role === 'admin') return 'Lead Admin Dashboard';
+    if (user?.role === 'secondary_admin') return 'Admin Dashboard';
     if (user?.role === 'educator') return 'Educator Portal';
     return 'Learner Dashboard';
   };

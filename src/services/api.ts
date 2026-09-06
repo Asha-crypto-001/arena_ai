@@ -845,5 +845,161 @@ export const api = {
       if (res.ok) return await handleResponse<any>(res);
     } catch {}
     return { success: true, match: { requestId, educatorId } };
+  },
+
+  // Admin User Directory, Contact Access & Secondary Admin Delegation
+  async getAdminUsers() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users`);
+      if (res.ok) return await handleResponse<any[]>(res);
+    } catch {}
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
+    const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
+    const requests = getLocalStorageData<LearnerRequest[]>('learner_requests', []);
+    const bookings = getLocalStorageData<Booking[]>('bookings', initialLocalBookings);
+
+    return users.map(u => {
+      const learner = learners.find(l => l.user_id === u.id) || null;
+      const educator = educators.find(e => e.user_id === u.id) || null;
+      const userRequests = requests.filter(r => r.learner_id === learner?.id || r.learner_email === u.email);
+      const userBookings = bookings.filter(b => b.learner_id === learner?.id || b.educator_id === educator?.id);
+
+      const allInterests: string[] = [];
+      if (learner?.learning_interests) allInterests.push(...learner.learning_interests);
+      if (userRequests.length > 0) allInterests.push(...userRequests.map(r => r.skill_name));
+      if (educator?.title) allInterests.push(`Teaches: ${educator.title}`);
+
+      return {
+        ...u,
+        location: u.location || learner?.location || educator?.location || 'Mbarara City, Uganda',
+        whatsapp: u.whatsapp || u.phone,
+        interests: Array.from(new Set(allInterests)),
+        learnerProfile: learner,
+        educatorProfile: educator,
+        requestsCount: userRequests.length,
+        bookingsCount: userBookings.length
+      };
+    });
+  },
+
+  async assignSecondaryAdmin(userId: string, adminId?: string, adminName: string = 'Ashabahebwa Hassan') {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/assign-secondary-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: adminId, admin_name: adminName })
+      });
+      if (res.ok) return await handleResponse<any>(res);
+    } catch {}
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const u = users.find(user => user.id === userId);
+    if (u) {
+      u.role = 'secondary_admin';
+      u.admin_assigned_by = adminName;
+      u.admin_assigned_at = new Date().toISOString();
+      setLocalStorageData('users', users);
+
+      // Add audit log
+      const auditLogs = getLocalStorageData<AdminAction[]>('audit_logs', initialLocalAuditLogs);
+      auditLogs.unshift({
+        id: `act-${Date.now()}`,
+        admin_id: adminId || 'usr-admin-ashabahebwa',
+        admin_name: adminName,
+        action_type: 'ASSIGN_SECONDARY_ADMIN',
+        target_entity: 'User',
+        target_id: u.id,
+        details: `Assigned ${u.name} (${u.email}) as Secondary Administrator with operational oversight privileges.`,
+        created_at: new Date().toISOString()
+      });
+      setLocalStorageData('audit_logs', auditLogs);
+
+      return { success: true, user: u };
+    }
+    return { success: false };
+  },
+
+  async revokeSecondaryAdmin(userId: string, adminId?: string, adminName: string = 'Ashabahebwa Hassan') {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/revoke-secondary-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: adminId, admin_name: adminName })
+      });
+      if (res.ok) return await handleResponse<any>(res);
+    } catch {}
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const educators = getLocalStorageData<Educator[]>('educators', initialLocalEducators);
+    const u = users.find(user => user.id === userId);
+    if (u) {
+      const isEdu = educators.some(e => e.user_id === u.id);
+      u.role = isEdu ? 'educator' : 'learner';
+      u.admin_assigned_by = undefined;
+      u.admin_assigned_at = undefined;
+      setLocalStorageData('users', users);
+
+      // Add audit log
+      const auditLogs = getLocalStorageData<AdminAction[]>('audit_logs', initialLocalAuditLogs);
+      auditLogs.unshift({
+        id: `act-${Date.now()}`,
+        admin_id: adminId || 'usr-admin-ashabahebwa',
+        admin_name: adminName,
+        action_type: 'REVOKE_SECONDARY_ADMIN',
+        target_entity: 'User',
+        target_id: u.id,
+        details: `Revoked Secondary Administrator privileges for ${u.name} (${u.email}). Reverted role to ${u.role}.`,
+        created_at: new Date().toISOString()
+      });
+      setLocalStorageData('audit_logs', auditLogs);
+
+      return { success: true, user: u };
+    }
+    return { success: false };
+  },
+
+  async getInterestsDemand() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/interests-demand`);
+      if (res.ok) return await handleResponse<any>(res);
+    } catch {}
+
+    const requests = getLocalStorageData<LearnerRequest[]>('learner_requests', []);
+    const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
+
+    const demandByTrade: { [trade: string]: { count: number; totalBudget: number; locations: Set<string> } } = {};
+    requests.forEach(r => {
+      const trade = r.skill_name || 'General Practical Skill';
+      if (!demandByTrade[trade]) {
+        demandByTrade[trade] = { count: 0, totalBudget: 0, locations: new Set() };
+      }
+      demandByTrade[trade].count += 1;
+      demandByTrade[trade].totalBudget += r.budget_ugx || 0;
+      if (r.location) demandByTrade[trade].locations.add(r.location);
+    });
+
+    const formattedDemand = Object.entries(demandByTrade).map(([trade, data]) => ({
+      trade,
+      requestCount: data.count,
+      averageBudgetUgx: data.count > 0 ? Math.round(data.totalBudget / data.count) : 0,
+      topLocations: Array.from(data.locations)
+    })).sort((a, b) => b.requestCount - a.requestCount);
+
+    const interestCounts: { [interest: string]: number } = {};
+    learners.forEach(l => {
+      l.learning_interests?.forEach((item: string) => {
+        interestCounts[item] = (interestCounts[item] || 0) + 1;
+      });
+    });
+
+    return {
+      tradeDemand: formattedDemand,
+      learnerInterests: interestCounts,
+      totalRequests: requests.length,
+      openRequestsCount: requests.filter(r => r.status === 'open').length,
+      matchedRequestsCount: requests.filter(r => r.status === 'matched' || r.status === 'fulfilled').length
+    };
   }
 };

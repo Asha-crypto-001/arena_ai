@@ -10,14 +10,18 @@ import {
   ShieldCheck, Users, GraduationCap, Calendar, CreditCard,
   CheckCircle2, XCircle, AlertCircle, Sparkles, Filter,
   Settings, Clock, FileText, ArrowRight, Eye, RefreshCw, Check,
-  Camera, Phone, Mail, MapPin, UserCheck
+  Camera, Phone, Mail, MapPin, UserCheck, MessageCircle,
+  UserPlus, UserMinus, ShieldAlert, Search, TrendingUp,
+  BarChart2, BookOpen, Award, ExternalLink
 } from 'lucide-react';
 import { ProfilePhotoUploadModal } from '../components/ProfilePhotoUploadModal';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'metrics' | 'verification' | 'matchmaker' | 'educators' | 'learners' | 'payments' | 'audit'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'interests' | 'verification' | 'matchmaker' | 'educators' | 'payments' | 'audit'>('metrics');
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [demandData, setDemandData] = useState<any>(null);
   const [verificationQueue, setVerificationQueue] = useState<Educator[]>([]);
   const [allEducators, setAllEducators] = useState<Educator[]>([]);
   const [learnerRequests, setLearnerRequests] = useState<LearnerRequest[]>([]);
@@ -26,6 +30,11 @@ export const AdminDashboard: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AdminAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+  // User directory search & filter state
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'secondary_admin' | 'educator' | 'learner'>('all');
+  const [assignActionMsg, setAssignActionMsg] = useState('');
 
   // Matchmaker interactive state
   const [selectedRequest, setSelectedRequest] = useState<LearnerRequest | null>(null);
@@ -36,8 +45,10 @@ export const AdminDashboard: React.FC = () => {
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      const [m, queue, edus, reqs, bks, pays, logs] = await Promise.all([
+      const [m, usersList, demand, queue, edus, reqs, bks, pays, logs] = await Promise.all([
         api.getAdminMetrics(),
+        api.getAdminUsers(),
+        api.getInterestsDemand(),
         api.getVerificationQueue(),
         api.getEducators({ status: undefined }),
         api.getLearnerRequests(),
@@ -47,6 +58,8 @@ export const AdminDashboard: React.FC = () => {
       ]);
 
       setMetrics(m);
+      setAllUsers(usersList);
+      setDemandData(demand);
       setVerificationQueue(queue);
       setAllEducators(edus);
       setLearnerRequests(reqs);
@@ -67,6 +80,34 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     loadAdminData();
   }, []);
+
+  const handleAssignSecondaryAdmin = async (targetUser: any) => {
+    const confirmMsg = `Promote ${targetUser.name} (${targetUser.email}) to Secondary Administrator? They will be granted operational access to verification queues and platform oversight.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.assignSecondaryAdmin(targetUser.id, user?.id, user?.name || 'Ashabahebwa Hassan');
+      setAssignActionMsg(`Successfully assigned ${targetUser.name} as Secondary Administrator.`);
+      setTimeout(() => setAssignActionMsg(''), 4000);
+      loadAdminData();
+    } catch (e) {
+      console.error('Error assigning secondary admin:', e);
+    }
+  };
+
+  const handleRevokeSecondaryAdmin = async (targetUser: any) => {
+    const confirmMsg = `Revoke Secondary Administrator privileges for ${targetUser.name}? Their account will return to regular permissions.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.revokeSecondaryAdmin(targetUser.id, user?.id, user?.name || 'Ashabahebwa Hassan');
+      setAssignActionMsg(`Revoked secondary administrator privileges for ${targetUser.name}.`);
+      setTimeout(() => setAssignActionMsg(''), 4000);
+      loadAdminData();
+    } catch (e) {
+      console.error('Error revoking secondary admin:', e);
+    }
+  };
 
   const handleSelectRequestForMatching = async (req: LearnerRequest) => {
     setSelectedRequest(req);
@@ -134,6 +175,21 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Filter users
+  const filteredUsers = allUsers.filter(u => {
+    const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+    const q = userSearchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.phone?.toLowerCase().includes(q) ||
+      u.location?.toLowerCase().includes(q) ||
+      u.interests?.some((i: string) => i.toLowerCase().includes(q));
+    return matchesRole && matchesSearch;
+  });
+
+  const isLeadAdmin = user?.email === 'ashabahebwahassan665@gmail.com' || user?.role === 'admin';
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Operations Header */}
@@ -144,13 +200,13 @@ export const AdminDashboard: React.FC = () => {
               <ShieldCheck className="w-3.5 h-3.5" />
               Platform Operations & Trust Center
             </span>
-            <span className="text-xs text-slate-400">Uganda Operations HQ</span>
+            <span className="text-xs text-slate-400">Mbarara HQ, Western Uganda</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight mt-1">
             iSkillLink Operations Dashboard
           </h1>
           <p className="text-xs text-slate-300 mt-0.5">
-            Admin oversight: Verification queues, rule-based matching, escrow protection, and audit logs.
+            Admin oversight: Verification queues, user directory & contacts, demand intelligence, secondary admin delegation, and escrow ledger.
           </p>
         </div>
 
@@ -163,7 +219,7 @@ export const AdminDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Admin Founder Profile & Photo Update Card */}
+      {/* Admin Profile & Lead Badge */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div className="relative group">
@@ -185,7 +241,7 @@ export const AdminDashboard: React.FC = () => {
               <span className="text-base font-bold text-gray-900">{user?.name || 'Ashabahebwa Hassan'}</span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-white flex items-center gap-1">
                 <UserCheck className="w-3 h-3 text-emerald-400" />
-                Founder & Lead Admin
+                {user?.role === 'admin' ? 'Founder & Primary Admin' : 'Secondary Administrator'}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
@@ -216,10 +272,19 @@ export const AdminDashboard: React.FC = () => {
         </button>
       </div>
 
+      {assignActionMsg && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+          <span>{assignActionMsg}</span>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm overflow-x-auto flex space-x-1">
         {[
           { id: 'metrics', label: 'Platform Metrics', icon: ShieldCheck },
+          { id: 'users', label: `User Directory & Contacts (${allUsers.length})`, icon: Users },
+          { id: 'interests', label: `Demands & User Interests`, icon: TrendingUp },
           { id: 'verification', label: `Verification Queue (${verificationQueue.length})`, icon: CheckCircle2 },
           { id: 'matchmaker', label: `Rule-Based Matchmaker`, icon: Sparkles },
           { id: 'educators', label: `Educators Directory (${allEducators.length})`, icon: GraduationCap },
@@ -249,6 +314,12 @@ export const AdminDashboard: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
+              <div className="text-xs text-gray-500 font-semibold">Registered Platform Users</div>
+              <div className="text-2xl font-black text-gray-900">{allUsers.length}</div>
+              <div className="text-[11px] text-emerald-700 font-medium">Learners, Artisans & Admins</div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
               <div className="text-xs text-gray-500 font-semibold">Active Verified Educators</div>
               <div className="text-2xl font-black text-gray-900">{metrics?.activeEducators || 0}</div>
               <div className="text-[11px] text-emerald-700 font-medium">All ID & workshop vetted</div>
@@ -265,20 +336,14 @@ export const AdminDashboard: React.FC = () => {
               <div className="text-xl font-black text-gray-900">{formatUGX(metrics?.totalVolumeUgx || 0)}</div>
               <div className="text-[11px] text-emerald-700 font-medium">MTN & Airtel protected</div>
             </div>
-
-            <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
-              <div className="text-xs text-gray-500 font-semibold">Platform Commission (10%)</div>
-              <div className="text-xl font-black text-slate-800">{formatUGX(metrics?.platformRevenueUgx || 0)}</div>
-              <div className="text-[11px] text-slate-500 font-medium">Facilitation revenue</div>
-            </div>
           </div>
 
-          {/* Quick Operations Table */}
+          {/* Quick Operations Summary */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
-                  Recent Learner Skill Requests
+                  Open Custom Skill Requests ({learnerRequests.filter(r => r.status === 'open').length})
                 </h3>
                 <button
                   onClick={() => setActiveTab('matchmaker')}
@@ -289,18 +354,15 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {learnerRequests.slice(0, 4).map(r => (
-                  <div key={r.id} className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between text-xs">
+                {learnerRequests.slice(0, 3).map(r => (
+                  <div key={r.id} className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 text-xs flex items-center justify-between">
                     <div>
                       <div className="font-bold text-gray-900">{r.skill_name}</div>
-                      <div className="text-gray-500 mt-0.5">{r.learner_name} • {r.location}</div>
+                      <div className="text-gray-500 text-[11px]">{r.learner_name} • {r.location} • Budget: {formatUGX(r.budget_ugx)}</div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-emerald-800 block">{formatUGX(r.budget_ugx)}</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(r.status)}`}>
-                        {r.status}
-                      </span>
-                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize ${getStatusBadgeClass(r.status)}`}>
+                      {r.status}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -309,7 +371,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
-                  Recent Platform Actions
+                  Recent Audit Actions
                 </h3>
                 <button
                   onClick={() => setActiveTab('audit')}
@@ -320,7 +382,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {auditLogs.slice(0, 4).map(log => (
+                {auditLogs.slice(0, 3).map(log => (
                   <div key={log.id} className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 text-xs space-y-1">
                     <div className="flex items-center justify-between font-semibold text-gray-900">
                       <span>{log.action_type.replace(/_/g, ' ')}</span>
@@ -335,7 +397,343 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: VERIFICATION QUEUE */}
+      {/* TAB 2: USER DIRECTORY, CONTACTS & SECONDARY ADMIN DELEGATION */}
+      {activeTab === 'users' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">
+                User Directory, Direct Contacts & Admin Delegation
+              </h2>
+              <p className="text-xs text-gray-500">
+                Inspect registered members, view their verified contact details and learning/teaching interests, and appoint Secondary Administrators.
+              </p>
+            </div>
+
+            {/* Quick Stats Badge */}
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <span className="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg">
+                Secondary Admins: {allUsers.filter(u => u.role === 'secondary_admin').length}
+              </span>
+              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-lg">
+                Educators: {allUsers.filter(u => u.role === 'educator').length}
+              </span>
+              <span className="px-2.5 py-1 bg-blue-50 text-blue-900 border border-blue-200 rounded-lg">
+                Learners: {allUsers.filter(u => u.role === 'learner').length}
+              </span>
+            </div>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:w-80">
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="Search name, phone, email, skill..."
+                className="w-full text-xs p-2.5 pl-9 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            </div>
+
+            {/* Role Filter Pills */}
+            <div className="flex p-1 bg-gray-100 rounded-xl text-xs font-bold w-full sm:w-auto overflow-x-auto">
+              {[
+                { id: 'all', label: 'All Users' },
+                { id: 'secondary_admin', label: 'Secondary Admins' },
+                { id: 'educator', label: 'Educators' },
+                { id: 'learner', label: 'Learners' },
+                { id: 'admin', label: 'Lead Admin' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setUserRoleFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                    userRoleFilter === f.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* User Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((u) => {
+                const isThisLeadAdmin = u.email === 'ashabahebwahassan665@gmail.com';
+                const isSecAdmin = u.role === 'secondary_admin';
+                const cleanPhone = (u.phone || '').replace(/[^0-9]/g, '');
+                const waNumber = cleanPhone.startsWith('256') ? cleanPhone : `256${cleanPhone.replace(/^0/, '')}`;
+
+                return (
+                  <div
+                    key={u.id}
+                    className={`p-5 rounded-2xl border transition space-y-4 ${
+                      isThisLeadAdmin
+                        ? 'bg-amber-50/40 border-amber-300 ring-1 ring-amber-400/30'
+                        : isSecAdmin
+                        ? 'bg-slate-50 border-slate-300 ring-1 ring-slate-400/30'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {/* Top Identity Row */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={u.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                          alt={u.name}
+                          className="w-12 h-12 rounded-xl object-cover border border-gray-300 shadow-xs"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-sm text-gray-900">{u.name}</span>
+                            {isThisLeadAdmin ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 text-amber-300">
+                                Lead Admin (Founder)
+                              </span>
+                            ) : isSecAdmin ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                Secondary Admin
+                              </span>
+                            ) : u.role === 'educator' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                Educator
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
+                                Learner
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            <span>{u.location || 'Mbarara, Uganda'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Direct Contact Information Box */}
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        Direct Contact Channels:
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Phone Call */}
+                        <a
+                          href={`tel:${u.phone}`}
+                          className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg text-gray-800 font-semibold text-[11px] flex items-center gap-1 transition"
+                        >
+                          <Phone className="w-3 h-3 text-emerald-700" />
+                          <span>{u.phone || 'No phone'}</span>
+                        </a>
+
+                        {/* WhatsApp Direct Link */}
+                        <a
+                          href={`https://wa.me/${waNumber}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 transition shadow-xs"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </a>
+
+                        {/* Email */}
+                        <a
+                          href={`mailto:${u.email}`}
+                          className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium text-[11px] flex items-center gap-1 transition truncate max-w-full"
+                        >
+                          <Mail className="w-3 h-3 text-gray-400" />
+                          <span className="truncate">{u.email}</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Interests & Demands Tag Area */}
+                    <div className="space-y-1.5 text-xs">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        What this user is interested in / offering:
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {u.interests && u.interests.length > 0 ? (
+                          u.interests.map((interest: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200 text-stone-800 text-[11px] font-medium"
+                            >
+                              {interest}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-gray-400 italic">No specific trade tagged yet</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Admin Promotion / Delegation Controls */}
+                    {isLeadAdmin && !isThisLeadAdmin && (
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          {isSecAdmin
+                            ? `Assigned by: ${u.admin_assigned_by || 'Founder'}`
+                            : 'Standard user access'}
+                        </span>
+
+                        {isSecAdmin ? (
+                          <button
+                            onClick={() => handleRevokeSecondaryAdmin(u)}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                          >
+                            <UserMinus className="w-3.5 h-3.5" />
+                            <span>Revoke Admin Access</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAssignSecondaryAdmin(u)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs"
+                          >
+                            <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Assign as Secondary Admin</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-2 text-center py-12 text-xs text-gray-500">
+                No users found matching your search query.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: DEMAND & USER INTERESTS INTELLIGENCE */}
+      {activeTab === 'interests' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+          <div className="border-b border-gray-100 pb-4">
+            <h2 className="text-base font-bold text-gray-900">
+              Demand & User Interests Intelligence
+            </h2>
+            <p className="text-xs text-gray-500">
+              Real-time analytics on what skills Ugandan students are requesting, average learner budgets in UGX, and regional demand clusters.
+            </p>
+          </div>
+
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1">
+              <span className="text-gray-600 font-semibold">Total Custom Learning Inquiries</span>
+              <div className="text-2xl font-black text-emerald-950">{demandData?.totalRequests || learnerRequests.length}</div>
+              <span className="text-[11px] text-emerald-800 font-medium">Submitted by active learners</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
+              <span className="text-gray-600 font-semibold">Open Matching Queue</span>
+              <div className="text-2xl font-black text-amber-950">{demandData?.openRequestsCount || learnerRequests.filter(r => r.status === 'open').length}</div>
+              <span className="text-[11px] text-amber-800 font-medium">Awaiting educator match</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-1">
+              <span className="text-gray-600 font-semibold">Matched & In-Training</span>
+              <div className="text-2xl font-black text-blue-950">{demandData?.matchedRequestsCount || learnerRequests.filter(r => r.status === 'matched').length}</div>
+              <span className="text-[11px] text-blue-800 font-medium">Apprentices actively learning</span>
+            </div>
+          </div>
+
+          {/* Detailed Skill Demand Breakdown */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+              Top Requested Vocational & Technical Trades
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {demandData?.tradeDemand && demandData.tradeDemand.length > 0 ? (
+                demandData.tradeDemand.map((item: any, idx: number) => (
+                  <div key={idx} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-2">
+                    <div className="flex items-center justify-between font-bold text-gray-900 text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-md bg-emerald-800 text-white flex items-center justify-center text-[10px] font-bold">
+                          {idx + 1}
+                        </span>
+                        {item.trade}
+                      </span>
+                      <span className="text-emerald-800 font-black">{item.requestCount} inquiries</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-600 pt-1 border-t border-gray-200/60">
+                      <span>Avg Student Budget: <strong>{formatUGX(item.averageBudgetUgx)}</strong></span>
+                      <span className="text-gray-500 truncate max-w-[150px]">
+                        Areas: {item.topLocations?.join(', ') || 'Mbarara City'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-xs text-gray-500 italic">No demand data aggregated yet.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Full Custom Learner Requests Log with Contacts */}
+          <div className="space-y-3 pt-4 border-t border-gray-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+              Live Learner Requests & Contact Records
+            </h3>
+
+            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-100 text-gray-700 font-semibold border-b border-gray-200">
+                  <tr>
+                    <th className="p-3">Learner Name</th>
+                    <th className="p-3">Requested Skill</th>
+                    <th className="p-3">Location</th>
+                    <th className="p-3">Max Budget</th>
+                    <th className="p-3">Direct Contact</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {learnerRequests.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-50/50">
+                      <td className="p-3 font-bold text-gray-900">{r.learner_name}</td>
+                      <td className="p-3 font-semibold text-emerald-950">{r.skill_name}</td>
+                      <td className="p-3 text-gray-600">{r.location}</td>
+                      <td className="p-3 font-bold text-gray-900">{formatUGX(r.budget_ugx)}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`tel:${r.contact_phone}`}
+                            className="text-emerald-800 font-semibold hover:underline"
+                          >
+                            {r.contact_phone}
+                          </a>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded border font-bold capitalize ${getStatusBadgeClass(r.status)}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-500">{formatShortDate(r.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: VERIFICATION QUEUE */}
       {activeTab === 'verification' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           <div>
@@ -380,95 +778,87 @@ export const AdminDashboard: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleApproveEducator(edu.id)}
-                          className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                           <span>Approve & Activate</span>
                         </button>
                         <button
                           onClick={() => handleSuspendEducator(edu.id)}
-                          className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs"
+                          className="px-3 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition"
                         >
-                          Reject
+                          Hold
                         </button>
                       </div>
                     </div>
 
-                    {/* Step-by-Step Vetting Checklist */}
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    {/* Step Checks Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                       {/* Step 1 */}
-                      <div className="p-3.5 rounded-xl bg-white border border-gray-200 space-y-2">
-                        <div className="flex items-center justify-between font-bold text-gray-900">
-                          <span>1. National ID (NIN)</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold capitalize ${
-                            v?.national_id_status === 'verified' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
+                      <div className="p-3.5 rounded-xl border border-gray-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-700">1. National ID (NIN)</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(v?.national_id_status || 'pending')}`}>
                             {v?.national_id_status || 'pending'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500 font-mono">NIN: {v?.national_id_number || 'CM910284910'}</p>
+                        <div className="font-mono text-[11px] text-gray-600">{v?.national_id_number || 'CM-NOT-SUBMITTED'}</div>
                         <button
                           onClick={() => handleVerifyStep(edu.id, 'national_id')}
-                          className="w-full py-1.5 text-[11px] font-bold rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                          className="w-full py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition"
                         >
-                          Mark ID Verified
+                          Verify NIN
                         </button>
                       </div>
 
                       {/* Step 2 */}
-                      <div className="p-3.5 rounded-xl bg-white border border-gray-200 space-y-2">
-                        <div className="flex items-center justify-between font-bold text-gray-900">
-                          <span>2. Trade Background</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold capitalize ${
-                            v?.background_check_status === 'verified' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
+                      <div className="p-3.5 rounded-xl border border-gray-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-700">2. Police / BG Check</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(v?.background_check_status || 'pending')}`}>
                             {v?.background_check_status || 'pending'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500">Trade test & references</p>
+                        <div className="text-[11px] text-gray-500">LC1 & Police clearance</div>
                         <button
                           onClick={() => handleVerifyStep(edu.id, 'background_check')}
-                          className="w-full py-1.5 text-[11px] font-bold rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                          className="w-full py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition"
                         >
-                          Confirm Trade Check
+                          Mark Cleared
                         </button>
                       </div>
 
                       {/* Step 3 */}
-                      <div className="p-3.5 rounded-xl bg-white border border-gray-200 space-y-2">
-                        <div className="flex items-center justify-between font-bold text-gray-900">
-                          <span>3. Screening Interview</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold capitalize ${
-                            v?.interview_status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {v?.interview_status || 'scheduled'}
+                      <div className="p-3.5 rounded-xl border border-gray-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-700">3. Practical Interview</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(v?.interview_status || 'pending')}`}>
+                            {v?.interview_status || 'pending'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500">Phone or in-person talk</p>
+                        <div className="text-[11px] text-gray-500">Phone or in-person review</div>
                         <button
                           onClick={() => handleVerifyStep(edu.id, 'interview')}
-                          className="w-full py-1.5 text-[11px] font-bold rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                          className="w-full py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition"
                         >
-                          Mark Interview Done
+                          Pass Interview
                         </button>
                       </div>
 
                       {/* Step 4 */}
-                      <div className="p-3.5 rounded-xl bg-white border border-gray-200 space-y-2">
-                        <div className="flex items-center justify-between font-bold text-gray-900">
-                          <span>4. Practical Bench Check</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold capitalize ${
-                            v?.skill_assessment_status === 'verified' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
+                      <div className="p-3.5 rounded-xl border border-gray-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-700">4. Skill Assessment</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(v?.skill_assessment_status || 'pending')}`}>
                             {v?.skill_assessment_status || 'pending'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-500">Workshop tooling inspection</p>
+                        <div className="text-[11px] text-gray-500">Workshop & tools review</div>
                         <button
                           onClick={() => handleVerifyStep(edu.id, 'skill_assessment')}
-                          className="w-full py-1.5 text-[11px] font-bold rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                          className="w-full py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition"
                         >
-                          Pass Workshop Check
+                          Approve Skill
                         </button>
                       </div>
                     </div>
@@ -476,242 +866,221 @@ export const AdminDashboard: React.FC = () => {
                 );
               })
             ) : (
-              <div className="text-center py-12 text-xs text-gray-500 bg-gray-50 rounded-2xl border border-gray-200">
-                Verification queue is clear! All active educators are fully vetted.
+              <div className="text-center py-12 text-xs text-gray-500 border border-dashed border-gray-300 rounded-2xl">
+                No educator applications currently pending verification.
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* TAB 3: RULE-BASED MATCHMAKER */}
+      {/* TAB 5: MATCHMAKER */}
       {activeTab === 'matchmaker' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
-                Rule-Based Engine
-              </span>
-            </div>
-            <h2 className="text-base font-bold text-gray-900 mt-1">
-              Match Learner Requests with Verified Educators
-            </h2>
+            <h2 className="text-base font-bold text-gray-900">Rule-Based Matchmaker Oversight</h2>
             <p className="text-xs text-gray-500">
-              Evaluates skill overlap (35%), format (20%), proximity (15%), budget (15%), and educator rating (15%).
+              Review custom learning goals submitted by students and evaluate ranked educator matches with rule-based scoring.
             </p>
           </div>
 
-          {matchSuccessMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{matchSuccessMsg}</span>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Requests Picker */}
+            {/* Left: Requests List */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Select Skill Request ({learnerRequests.length})
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                Custom Skill Inquiries ({learnerRequests.length})
               </h3>
-              <div className="space-y-2">
+
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {learnerRequests.map(req => (
-                  <button
+                  <div
                     key={req.id}
                     onClick={() => handleSelectRequestForMatching(req)}
-                    className={`w-full p-3.5 rounded-xl border text-left text-xs transition ${
+                    className={`p-3.5 rounded-xl border text-xs cursor-pointer transition ${
                       selectedRequest?.id === req.id
-                        ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-bold shadow-sm'
-                        : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        ? 'bg-emerald-50 border-emerald-600 text-emerald-950 shadow-sm ring-1 ring-emerald-500'
+                        : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-gray-900 truncate max-w-[160px]">{req.skill_name}</span>
+                    <div className="flex items-center justify-between font-bold">
+                      <span>{req.skill_name}</span>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded border capitalize ${getStatusBadgeClass(req.status)}`}>
                         {req.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-gray-500 flex justify-between">
-                      <span>{req.learner_name}</span>
-                      <span>{formatUGX(req.budget_ugx)}</span>
+                    <div className="text-[11px] text-gray-600 mt-1">
+                      {req.learner_name} • {req.location}
                     </div>
-                  </button>
+                    <div className="text-[11px] text-emerald-800 font-semibold mt-1">
+                      Budget: {formatUGX(req.budget_ugx)} ({req.format_preference})
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Match Results & Evaluation */}
+            {/* Right: Evaluated Matches */}
             <div className="lg:col-span-2 space-y-4">
-              {selectedRequest && (
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="font-bold text-gray-900 text-sm">{selectedRequest.skill_name}</span>
-                      <p className="text-gray-600 mt-0.5">{selectedRequest.learning_goal}</p>
+              {selectedRequest ? (
+                <>
+                  <div className="p-4 rounded-xl bg-slate-900 text-white space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                        Evaluating Request: #{selectedRequest.id}
+                      </span>
+                      <span className="text-xs font-bold bg-emerald-800 px-2.5 py-0.5 rounded">
+                        Budget: {formatUGX(selectedRequest.budget_ugx)}
+                      </span>
                     </div>
-                    <span className="font-bold text-emerald-800 shrink-0">{formatUGX(selectedRequest.budget_ugx)}</span>
+                    <h3 className="text-base font-bold">{selectedRequest.skill_name} ({selectedRequest.skill_level})</h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">"{selectedRequest.learning_goal}"</p>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-1 border-t border-slate-800">
+                      <span>Learner: {selectedRequest.learner_name}</span>
+                      <span>•</span>
+                      <span>Location: {selectedRequest.location}</span>
+                      <span>•</span>
+                      <span>Schedule: {selectedRequest.preferred_schedule}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 pt-1 border-t border-gray-200">
-                    <span><strong>Location:</strong> {selectedRequest.location}</span>
-                    <span><strong>Format:</strong> {selectedRequest.format_preference}</span>
-                    <span><strong>Learner:</strong> {selectedRequest.learner_name} ({selectedRequest.contact_phone})</span>
-                  </div>
-                </div>
-              )}
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Ranked Verified Educator Matches
-                </h4>
+                  {matchSuccessMsg && (
+                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>{matchSuccessMsg}</span>
+                    </div>
+                  )}
 
-                {isMatchingLoading ? (
-                  <div className="p-8 text-center text-xs text-gray-500">Evaluating matches...</div>
-                ) : evaluatedMatches.length > 0 ? (
-                  evaluatedMatches.map(m => (
-                    <div
-                      key={m.educator.id}
-                      className="p-4 rounded-xl border border-gray-200 bg-white hover:border-emerald-500 transition space-y-3 shadow-sm"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={m.educator.user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
-                            alt={m.educator.user?.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-gray-200"
-                          />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h5 className="font-bold text-gray-900 text-sm">{m.educator.user?.name}</h5>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">
-                                {m.match_score}% COMPATIBLE
-                              </span>
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                      Rule-Based Ranked Matches ({evaluatedMatches.length})
+                    </h4>
+
+                    {isMatchingLoading ? (
+                      <div className="text-center py-12 text-xs text-gray-500">Evaluating matching algorithm criteria...</div>
+                    ) : evaluatedMatches.length > 0 ? (
+                      evaluatedMatches.map(m => (
+                        <div
+                          key={m.educator.id}
+                          className="p-4 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-white hover:border-emerald-600 transition space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={m.educator.user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
+                                alt={m.educator.user?.name}
+                                className="w-12 h-12 rounded-xl object-cover border border-gray-300"
+                              />
+                              <div>
+                                <div className="font-bold text-gray-900 text-sm">{m.educator.user?.name}</div>
+                                <div className="text-xs text-gray-600">{m.educator.title} • {m.educator.location}</div>
+                                <div className="text-[11px] text-emerald-800 font-bold mt-0.5">
+                                  Rate: {formatUGX(m.educator.hourly_rate_ugx)}/hr
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-xs text-gray-600">{m.educator.title}</p>
-                            <div className="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
-                              <span>{m.educator.location}</span>
-                              <span>•</span>
-                              <span>{formatUGX(m.educator.hourly_rate_ugx)}/hr</span>
-                              <span>•</span>
-                              <span>{m.educator.years_experience} yrs exp</span>
+
+                            <div className="text-right">
+                              <div className="text-lg font-black text-emerald-700">{m.match_score}%</div>
+                              <span className="text-[10px] text-gray-500 font-semibold">Match Score</span>
                             </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase">Match Factors:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.match_reasons.map((r, idx) => (
+                                <span key={idx} className="text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-gray-200 flex justify-end">
+                            <button
+                              onClick={() => handleAssignMatch(m.educator.id)}
+                              className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition"
+                            >
+                              Assign & Introduce Match
+                            </button>
                           </div>
                         </div>
-
-                        <button
-                          onClick={() => handleAssignMatch(m.educator.id)}
-                          className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Assign Match</span>
-                        </button>
-                      </div>
-
-                      {/* Transparent criteria */}
-                      <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-[11px] space-y-1">
-                        {m.match_reasons.map((r, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 text-gray-600">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span>{r}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-xs text-gray-500">
-                    No verified educators found in this category.
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-xs text-gray-400">No matching educators found for this request.</div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <div className="text-center py-20 text-xs text-gray-400">
+                  Select a learner request on the left to evaluate matches.
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: EDUCATORS DIRECTORY */}
+      {/* TAB 6: EDUCATORS DIRECTORY */}
       {activeTab === 'educators' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">All Registered Educators & Artisans</h2>
-            <p className="text-xs text-gray-500">Full platform database of verified and pending mentors.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">All Registered Educators & Mentors</h2>
+              <p className="text-xs text-gray-500">Master practitioners and trainers across Uganda.</p>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-700 uppercase font-bold border-y border-gray-200">
-                <tr>
-                  <th className="p-3">Educator</th>
-                  <th className="p-3">Trade & Title</th>
-                  <th className="p-3">Location</th>
-                  <th className="p-3">Hourly Rate</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Rating</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-700">
-                {allEducators.map(edu => (
-                  <tr key={edu.id} className="hover:bg-gray-50/50">
-                    <td className="p-3 font-semibold text-gray-900 flex items-center gap-2">
-                      <img
-                        src={edu.user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
-                        alt=""
-                        className="w-7 h-7 rounded-full object-cover"
-                      />
-                      <span>{edu.user?.name}</span>
-                    </td>
-                    <td className="p-3 text-gray-600">{edu.title}</td>
-                    <td className="p-3">{edu.location}</td>
-                    <td className="p-3 font-bold text-gray-900">{formatUGX(edu.hourly_rate_ugx)}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded border font-bold capitalize ${getStatusBadgeClass(edu.status)}`}>
-                        {edu.status}
-                      </span>
-                    </td>
-                    <td className="p-3 font-bold text-amber-700">{edu.rating > 0 ? `${edu.rating}★` : 'New'}</td>
-                    <td className="p-3 text-right space-x-2">
-                      {edu.status !== 'active' ? (
-                        <button
-                          onClick={() => handleApproveEducator(edu.id)}
-                          className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold border border-emerald-200"
-                        >
-                          Activate
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleSuspendEducator(edu.id)}
-                          className="px-2.5 py-1 rounded bg-rose-50 text-rose-800 hover:bg-rose-100 font-bold border border-rose-200"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allEducators.map(edu => (
+              <div key={edu.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={edu.user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
+                    alt={edu.user?.name}
+                    className="w-12 h-12 rounded-xl object-cover border border-gray-300"
+                  />
+                  <div>
+                    <h3 className="font-bold text-xs text-gray-900">{edu.user?.name}</h3>
+                    <div className="text-[11px] text-gray-500">{edu.title}</div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase mt-1 inline-block ${getStatusBadgeClass(edu.status)}`}>
+                      {edu.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div><strong>Base:</strong> {edu.location}</div>
+                  <div><strong>Rate:</strong> {formatUGX(edu.hourly_rate_ugx)}/hr</div>
+                  <div><strong>Phone:</strong> {edu.user?.phone}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* TAB 5: PAYMENTS & ESCROW LEDGER */}
+      {/* TAB 7: PAYMENTS & ESCROW */}
       {activeTab === 'payments' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Platform Escrow Ledger & Disbursal</h2>
-            <p className="text-xs text-gray-500">Monitor deposits, release educator payouts for completed sessions, and track 10% commission.</p>
+            <h2 className="text-base font-bold text-gray-900">Platform Escrow Ledger</h2>
+            <p className="text-xs text-gray-500">
+              Escrow deposits held safely in MTN/Airtel MoMo until learner milestones are delivered.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-700 uppercase font-bold border-y border-gray-200">
+              <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200">
                 <tr>
-                  <th className="p-3">Ref</th>
-                  <th className="p-3">Gross (UGX)</th>
-                  <th className="p-3">10% Platform Fee</th>
-                  <th className="p-3">Net Educator (90%)</th>
+                  <th className="p-3">Reference</th>
+                  <th className="p-3">Total UGX</th>
+                  <th className="p-3">Educator Net (90%)</th>
+                  <th className="p-3">Platform Fee (10%)</th>
+                  <th className="p-3">Method</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Escrow Action</th>
+                  <th className="p-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -719,24 +1088,24 @@ export const AdminDashboard: React.FC = () => {
                   <tr key={p.id} className="hover:bg-gray-50/50">
                     <td className="p-3 font-mono font-bold text-gray-900">{p.payment_reference}</td>
                     <td className="p-3 font-bold text-gray-900">{formatUGX(p.amount_ugx)}</td>
-                    <td className="p-3 font-semibold text-slate-600">{formatUGX(p.platform_fee_ugx)}</td>
-                    <td className="p-3 font-bold text-emerald-800">{formatUGX(p.payout_amount_ugx)}</td>
+                    <td className="p-3 font-semibold text-emerald-800">{formatUGX(p.payout_amount_ugx)}</td>
+                    <td className="p-3 text-slate-600">{formatUGX(p.platform_fee_ugx)}</td>
+                    <td className="p-3 uppercase font-semibold text-emerald-900">{p.method.replace('_', ' ')}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded border font-bold capitalize ${getStatusBadgeClass(p.status)}`}>
                         {p.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="p-3 text-right">
-                      {p.status === 'paid' && (
+                    <td className="p-3">
+                      {p.status === 'paid' ? (
                         <button
                           onClick={() => handleReleasePayout(p.id)}
-                          className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+                          className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded text-[11px]"
                         >
-                          Release MoMo Payout
+                          Release Payout
                         </button>
-                      )}
-                      {p.status === 'completed' && (
-                        <span className="text-[11px] text-emerald-700 font-bold">Disbursed ✓</span>
+                      ) : (
+                        <span className="text-gray-400 text-[11px]">{p.status}</span>
                       )}
                     </td>
                   </tr>
@@ -747,17 +1116,19 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 6: AUDIT TRAIL */}
+      {/* TAB 8: AUDIT TRAIL */}
       {activeTab === 'audit' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Administrative Audit Trail</h2>
-            <p className="text-xs text-gray-500">Immutable ledger of platform actions, verifications, and payouts.</p>
+            <h2 className="text-base font-bold text-gray-900">Administrative Audit Trail & Security Logs</h2>
+            <p className="text-xs text-gray-500">
+              Immutable operational record of all verification decisions, matches, and secondary admin appointments.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-700 uppercase font-bold border-y border-gray-200">
+              <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200">
                 <tr>
                   <th className="p-3">Timestamp</th>
                   <th className="p-3">Admin</th>
@@ -782,7 +1153,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Global Profile Photo Upload Modal */}
+      {/* Profile Photo Upload Modal */}
       <ProfilePhotoUploadModal
         isOpen={showPhotoModal}
         onClose={() => setShowPhotoModal(false)}

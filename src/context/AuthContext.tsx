@@ -16,7 +16,7 @@ interface AuthContextType {
   logout: () => void;
   refreshNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
-  activeRole: 'learner' | 'educator' | 'admin' | 'guest';
+  activeRole: 'learner' | 'educator' | 'admin' | 'secondary_admin' | 'guest';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

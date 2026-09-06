@@ -1,4 +1,4 @@
-export type UserRole = 'learner' | 'educator' | 'admin';
+export type UserRole = 'learner' | 'educator' | 'admin' | 'secondary_admin';
 
 export type EducatorStatus = 'applied' | 'under_review' | 'verification' | 'approved' | 'active' | 'suspended' | 'inactive';
 
@@ -18,8 +18,15 @@ export interface User {
   role: UserRole;
   name: string;
   phone: string;
-  avatar_url: string;
+  whatsapp?: string;
   location?: string;
+  avatar_url: string;
+  is_primary_admin?: boolean;
+  admin_assigned_by?: string;
+  admin_assigned_at?: string;
+  interests?: string[];
+  learnerProfile?: Learner;
+  educatorProfile?: Educator;
   created_at: string;
 }
 

@@ -1196,6 +1196,90 @@ app.get('/api/admin/audit-logs', (req: Request, res: Response) => {
   res.json(logs);
 });
 
+// Admin User Directory & Role Assignment
+app.get('/api/admin/users', (req: Request, res: Response) => {
+  const users = db.getAllUsersDetailed();
+  res.json(users);
+});
+
+app.post('/api/admin/users/:id/assign-secondary-admin', (req: Request, res: Response) => {
+  const { admin_id, admin_name } = req.body;
+  const userId = String(req.params.id);
+
+  const updatedUser = db.assignSecondaryAdmin(
+    userId,
+    admin_id || 'usr-admin-ashabahebwa',
+    admin_name || 'Ashabahebwa Hassan'
+  );
+
+  if (!updatedUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({ success: true, user: updatedUser });
+});
+
+app.post('/api/admin/users/:id/revoke-secondary-admin', (req: Request, res: Response) => {
+  const { admin_id, admin_name } = req.body;
+  const userId = String(req.params.id);
+
+  const updatedUser = db.revokeSecondaryAdmin(
+    userId,
+    admin_id || 'usr-admin-ashabahebwa',
+    admin_name || 'Ashabahebwa Hassan'
+  );
+
+  if (!updatedUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({ success: true, user: updatedUser });
+});
+
+// Admin Learner & Educator Demand / Interests Intelligence
+app.get('/api/admin/interests-demand', (req: Request, res: Response) => {
+  const requests = db.getLearnerRequests();
+  const learners = db.getLearners();
+  const educators = db.getEducators();
+  const categories = db.getCategories();
+
+  // Aggregate skill demand counts
+  const demandByTrade: { [trade: string]: { count: number; totalBudget: number; locations: Set<string> } } = {};
+
+  requests.forEach(r => {
+    const trade = r.skill_name || 'General Practical Skill';
+    if (!demandByTrade[trade]) {
+      demandByTrade[trade] = { count: 0, totalBudget: 0, locations: new Set() };
+    }
+    demandByTrade[trade].count += 1;
+    demandByTrade[trade].totalBudget += r.budget_ugx || 0;
+    if (r.location) demandByTrade[trade].locations.add(r.location);
+  });
+
+  const formattedDemand = Object.entries(demandByTrade).map(([trade, data]) => ({
+    trade,
+    requestCount: data.count,
+    averageBudgetUgx: data.count > 0 ? Math.round(data.totalBudget / data.count) : 0,
+    topLocations: Array.from(data.locations)
+  })).sort((a, b) => b.requestCount - a.requestCount);
+
+  // Aggregate learner general interest categories
+  const interestCounts: { [interest: string]: number } = {};
+  learners.forEach(l => {
+    l.learning_interests?.forEach(item => {
+      interestCounts[item] = (interestCounts[item] || 0) + 1;
+    });
+  });
+
+  res.json({
+    tradeDemand: formattedDemand,
+    learnerInterests: interestCounts,
+    totalRequests: requests.length,
+    openRequestsCount: requests.filter(r => r.status === 'open').length,
+    matchedRequestsCount: requests.filter(r => r.status === 'matched' || r.status === 'fulfilled').length
+  });
+});
+
 // Reset Database if needed
 app.post('/api/system/reset', (req: Request, res: Response) => {
   const state = db.resetToDefault();

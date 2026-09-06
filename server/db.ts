@@ -152,6 +152,103 @@ class Database {
     return this.data.users[index];
   }
 
+  public getAllUsersDetailed() {
+    return this.data.users.map(u => {
+      const learner = this.data.learners.find(l => l.user_id === u.id) || null;
+      const educator = this.data.educators.find(e => e.user_id === u.id) || null;
+      const requests = this.data.learnerRequests.filter(r => r.learner_id === learner?.id || r.learner_email === u.email);
+      const userBookings = this.data.bookings.filter(b => b.learner_id === learner?.id || b.educator_id === educator?.id);
+      
+      const allInterests: string[] = [];
+      if (learner?.learning_interests) allInterests.push(...learner.learning_interests);
+      if (requests.length > 0) allInterests.push(...requests.map(r => r.skill_name));
+      if (educator?.title) allInterests.push(`Teaches: ${educator.title}`);
+
+      return {
+        ...u,
+        location: u.location || learner?.location || educator?.location || 'Uganda',
+        whatsapp: u.whatsapp || u.phone,
+        interests: Array.from(new Set(allInterests)),
+        learnerProfile: learner,
+        educatorProfile: educator,
+        requestsCount: requests.length,
+        bookingsCount: userBookings.length
+      };
+    });
+  }
+
+  public assignSecondaryAdmin(userId: string, adminId: string, adminName: string) {
+    const user = this.findUserById(userId);
+    if (!user) return null;
+
+    user.role = 'secondary_admin';
+    user.admin_assigned_by = adminName;
+    user.admin_assigned_at = new Date().toISOString();
+    user.updated_at = new Date().toISOString();
+
+    // Log admin action
+    this.logAdminAction({
+      admin_id: adminId,
+      admin_name: adminName,
+      action_type: 'ASSIGN_SECONDARY_ADMIN',
+      target_entity: 'User',
+      target_id: user.id,
+      details: `Assigned user ${user.name} (${user.email}) as Secondary Administrator with operational oversight privileges.`
+    });
+
+    // Send user notification
+    this.createNotification({
+      id: `notif-${Date.now()}`,
+      user_id: user.id,
+      type: 'system_alert',
+      title: 'Administrator Access Granted',
+      message: `You have been appointed as a Secondary Administrator by ${adminName}. You now have access to verification queues and oversight tools.`,
+      link: '/admin-dashboard',
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
+
+    this.saveData();
+    return user;
+  }
+
+  public revokeSecondaryAdmin(userId: string, adminId: string, adminName: string) {
+    const user = this.findUserById(userId);
+    if (!user) return null;
+
+    // Determine return role based on registered profile
+    const educator = this.findEducatorByUserId(user.id);
+    user.role = educator ? 'educator' : 'learner';
+    user.admin_assigned_by = undefined;
+    user.admin_assigned_at = undefined;
+    user.updated_at = new Date().toISOString();
+
+    // Log admin action
+    this.logAdminAction({
+      admin_id: adminId,
+      admin_name: adminName,
+      action_type: 'REVOKE_SECONDARY_ADMIN',
+      target_entity: 'User',
+      target_id: user.id,
+      details: `Revoked Secondary Administrator privileges for ${user.name} (${user.email}). Reverted role to ${user.role}.`
+    });
+
+    // Send user notification
+    this.createNotification({
+      id: `notif-${Date.now()}`,
+      user_id: user.id,
+      type: 'system_alert',
+      title: 'Administrator Privileges Updated',
+      message: `Your Secondary Administrator privileges have been concluded by ${adminName}. Account role restored to ${user.role}.`,
+      link: user.role === 'educator' ? '/educator-dashboard' : '/learner-dashboard',
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
+
+    this.saveData();
+    return user;
+  }
+
   public createLearner(learner: Learner) {
     this.data.learners.push(learner);
     this.saveData();
