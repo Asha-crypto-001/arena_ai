@@ -52,24 +52,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     }
   };
 
-  const fillAdminCredentials = () => {
-    setMode('login');
-    setEmail('ashabahebwahassan665@gmail.com');
-    setPassword('');
-  };
-
-  const fillEducatorCredentials = () => {
-    setMode('login');
-    setEmail('mukasa.tailor@iskilllink.ug');
-    setPassword('');
-  };
-
-  const fillLearnerCredentials = () => {
-    setMode('login');
-    setEmail('sarah.namubiru@gmail.com');
-    setPassword('');
-  };
-
   return (
     <div className="max-w-md mx-auto px-4 py-12 space-y-6">
       {/* Brand Header */}
@@ -244,49 +226,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </button>
         </form>
 
-        {/* Quick Credentials Helper */}
-        <div className="pt-4 border-t border-gray-100 space-y-2">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block text-center">
-            Default Platform Accounts
-          </span>
-          <div className="space-y-1.5 text-xs">
-            <button
-              type="button"
-              onClick={fillAdminCredentials}
-              className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-left flex items-center justify-between transition shadow-sm"
-            >
-              <div>
-                <div className="font-bold flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Ashabahebwa Hassan (Admin & Founder)</span>
-                </div>
-                <div className="text-[10px] text-slate-400">ashabahebwahassan665@gmail.com</div>
-              </div>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-slate-900">
-                ADMIN
-              </span>
-            </button>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={fillEducatorCredentials}
-                className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-left border border-emerald-200 transition"
-              >
-                <div className="font-bold text-emerald-950">Joseph Mukasa</div>
-                <div className="text-[10px] text-emerald-800">Verified Tailor Educator</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={fillLearnerCredentials}
-                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-left border border-blue-200 transition"
-              >
-                <div className="font-bold text-blue-950">Sarah Namubiru</div>
-                <div className="text-[10px] text-blue-800">Active Student</div>
-              </button>
-            </div>
-          </div>
+        <div className="pt-3 border-t border-gray-100 text-center text-xs text-gray-500">
+          Protected by iSkillLink Security • Headquartered in Mbarara City
         </div>
       </div>
     </div>
