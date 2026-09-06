@@ -209,6 +209,69 @@ export const api = {
     return { user, learnerProfile, educatorProfile };
   },
 
+  async updateUserAvatar(userId: string, avatarUrl: string) {
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/avatar`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar_url: avatarUrl })
+      });
+      if (res.ok) return await handleResponse<{ user: User }>(res);
+    } catch {}
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex].avatar_url = avatarUrl;
+      users[userIndex].updated_at = new Date().toISOString();
+      setLocalStorageData('users', users);
+
+      // Also update in educators if applicable
+      const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
+      const eduIndex = educators.findIndex(e => e.user_id === userId);
+      if (eduIndex !== -1 && educators[eduIndex].user) {
+        educators[eduIndex].user.avatar_url = avatarUrl;
+        setLocalStorageData('educators', educators);
+      }
+
+      return { user: users[userIndex] };
+    }
+    return { user: null };
+  },
+
+  async updateUserProfile(userId: string, updates: Partial<User>) {
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) return await handleResponse<{ user: User }>(res);
+    } catch {}
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex] = {
+        ...users[userIndex],
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      setLocalStorageData('users', users);
+
+      // Also sync educators
+      const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
+      const eduIndex = educators.findIndex(e => e.user_id === userId);
+      if (eduIndex !== -1 && educators[eduIndex].user) {
+        educators[eduIndex].user = { ...educators[eduIndex].user, ...updates };
+        setLocalStorageData('educators', educators);
+      }
+
+      return { user: users[userIndex] };
+    }
+    return { user: null };
+  },
+
   // Categories & Skills
   async getCategories() {
     try {
@@ -291,9 +354,25 @@ export const api = {
     } catch {}
 
     const educators = getLocalStorageData<Educator[]>('educators', initialLocalEducators);
+    const userId = `usr-${Date.now()}`;
+    const newUser = {
+      id: userId,
+      email: data.email || 'educator@example.ug',
+      role: 'educator',
+      name: data.name || 'New Educator',
+      phone: data.phone || '+256 744 024 529',
+      avatar_url: data.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    users.push(newUser);
+    setLocalStorageData('users', users);
+
     const newEdu: Educator = {
       id: `edu-${Date.now()}`,
-      user_id: `usr-${Date.now()}`,
+      user_id: userId,
+      user: newUser as any,
       title: data.title,
       bio: data.bio,
       educator_type: data.educator_type || 'artisan',

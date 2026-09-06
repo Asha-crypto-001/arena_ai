@@ -7,9 +7,9 @@
       "role": "admin",
       "name": "Ashabahebwa Hassan",
       "phone": "+256 744 024 529",
-      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
       "created_at": "2026-01-01T08:00:00Z",
-      "updated_at": "2026-01-01T08:00:00Z"
+      "updated_at": "2026-09-06T21:25:39.423Z"
     },
     {
       "id": "usr-edu-1",
@@ -98,6 +98,28 @@
       "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
       "created_at": "2026-09-06T19:55:48.372Z",
       "updated_at": "2026-09-06T19:55:48.372Z"
+    },
+    {
+      "id": "usr-1788727958359-sihv",
+      "email": "mukasa.brian@test.ug",
+      "password_hash": "Password123",
+      "role": "learner",
+      "name": "Mukasa Brian",
+      "phone": "+256 700 111 222",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+      "created_at": "2026-09-06T20:52:38.359Z",
+      "updated_at": "2026-09-06T20:52:38.359Z"
+    },
+    {
+      "id": "usr-1788727960800-slfx",
+      "email": "kemigisha.joy@test.ug",
+      "password_hash": "Password123",
+      "role": "educator",
+      "name": "Kemigisha Joy",
+      "phone": "+256 700 333 444",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+      "created_at": "2026-09-06T20:52:40.800Z",
+      "updated_at": "2026-09-06T20:52:40.800Z"
     }
   ],
   "learners": [
@@ -122,6 +144,15 @@
       "learning_interests": [],
       "preferred_format": "in-person",
       "created_at": "2026-09-06T19:55:48.373Z"
+    },
+    {
+      "id": "lrn-1788727958360",
+      "user_id": "usr-1788727958359-sihv",
+      "location": "Mbarara City",
+      "bio": "Interested in learning practical skills.",
+      "learning_interests": [],
+      "preferred_format": "in-person",
+      "created_at": "2026-09-06T20:52:38.360Z"
     }
   ],
   "educators": [
@@ -296,6 +327,30 @@
       "total_students": 18,
       "featured": true,
       "created_at": "2026-01-28T16:00:00Z"
+    },
+    {
+      "id": "edu-1788727960801",
+      "user_id": "usr-1788727960800-slfx",
+      "title": "Practical Skills Educator",
+      "bio": "Sharing practical vocational expertise in Uganda.",
+      "educator_type": "practitioner",
+      "years_experience": 1,
+      "location": "Mbarara City",
+      "service_area": "Mbarara City & Western Region",
+      "teaching_formats": [
+        "in-person"
+      ],
+      "languages": [
+        "English",
+        "Runyankole"
+      ],
+      "equipment_provided": "Workshop practical equipment",
+      "hourly_rate_ugx": 35000,
+      "status": "applied",
+      "rating": 0,
+      "total_reviews": 0,
+      "total_students": 0,
+      "created_at": "2026-09-06T20:52:40.801Z"
     }
   ],
   "categories": [
@@ -933,6 +988,16 @@
       "verified_by_admin_id": "usr-admin-ashabahebwa",
       "verified_at": "2026-01-26T14:15:00Z",
       "notes": "ERA certification license verified."
+    },
+    {
+      "id": "v-edu-1788727960801",
+      "educator_id": "edu-1788727960801",
+      "national_id_number": "CM-PENDING-SUBMISSION",
+      "national_id_status": "pending",
+      "background_check_status": "pending",
+      "interview_status": "pending",
+      "skill_assessment_status": "pending",
+      "notes": "New educator registered. Pending verification."
     }
   ],
   "learnerRequests": [
@@ -1082,6 +1147,16 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif-1788727960803",
+      "user_id": "usr-admin-ashabahebwa",
+      "type": "system_alert",
+      "title": "New Educator Registered",
+      "message": "Kemigisha Joy has registered as an educator from Mbarara City.",
+      "link": "/admin-dashboard",
+      "is_read": false,
+      "created_at": "2026-09-06T20:52:40.803Z"
+    },
     {
       "id": "notif-1",
       "user_id": "usr-admin-ashabahebwa",

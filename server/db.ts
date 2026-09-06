@@ -140,6 +140,18 @@ class Database {
     return user;
   }
 
+  public updateUser(id: string, updates: Partial<User>) {
+    const index = this.data.users.findIndex(u => u.id === id);
+    if (index === -1) return null;
+    this.data.users[index] = {
+      ...this.data.users[index],
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+    this.saveData();
+    return this.data.users[index];
+  }
+
   public createLearner(learner: Learner) {
     this.data.learners.push(learner);
     this.saveData();

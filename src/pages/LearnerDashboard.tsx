@@ -5,10 +5,12 @@ import { api } from '../services/api';
 import { formatUGX, formatShortDate, getStatusBadgeClass } from '../utils/formatters';
 import { SimulatePaymentModal } from '../components/SimulatePaymentModal';
 import { ReviewModal } from '../components/ReviewModal';
+import { ProfilePhotoUploadModal } from '../components/ProfilePhotoUploadModal';
 import {
   BookOpen, Calendar, Clock, CreditCard, MessageSquare,
   Award, Star, User, Settings, CheckCircle2, AlertCircle,
-  PlusCircle, ArrowRight, ShieldCheck, ExternalLink, Send
+  PlusCircle, ArrowRight, ShieldCheck, ExternalLink, Send,
+  Camera
 } from 'lucide-react';
 
 interface LearnerDashboardProps {
@@ -32,6 +34,7 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
   const [newMessageText, setNewMessageText] = useState('');
   const [selectedRecipientId, setSelectedRecipientId] = useState('usr-edu-1');
   const [loading, setLoading] = useState(true);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Modal states
   const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
@@ -95,11 +98,20 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
       {/* Top Banner with Persona Profile */}
       <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <img
-            src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-            alt={user?.name}
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow"
-          />
+          <div className="relative group">
+            <img
+              src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+              alt={user?.name}
+              className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow"
+            />
+            <button
+              onClick={() => setShowPhotoModal(true)}
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-emerald-600 text-white shadow hover:bg-emerald-500 transition"
+              title="Change Profile Photo"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">
@@ -117,6 +129,13 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition border border-slate-700 flex items-center justify-center gap-2"
+          >
+            <Camera className="w-4 h-4 text-emerald-400" />
+            <span>Update Photo</span>
+          </button>
           <button
             onClick={onOpenSkillRequest}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center justify-center gap-2"
@@ -549,8 +568,42 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
 
       {/* TAB CONTENT: PROFILE */}
       {activeTab === 'profile' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4 max-w-2xl">
-          <h2 className="text-base font-bold text-gray-900">Learner Profile Details</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 max-w-2xl">
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Learner Profile Details</h2>
+              <p className="text-xs text-gray-500">Manage your personal details and profile picture.</p>
+            </div>
+            <button
+              onClick={() => setShowPhotoModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-1.5"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Change Photo</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <img
+                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                alt={user?.name}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm"
+              />
+              <button
+                onClick={() => setShowPhotoModal(true)}
+                className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-emerald-700 text-white shadow hover:bg-emerald-800 transition"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-gray-900">{user?.name}</div>
+              <div className="text-xs text-gray-500">{user?.email}</div>
+              <div className="text-[11px] text-emerald-700 font-semibold mt-0.5">Learner Account • Active</div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
               <label className="block text-gray-500 font-semibold mb-1">Full Name</label>
@@ -594,6 +647,12 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
           }}
         />
       )}
+
+      {/* Profile Photo Upload Modal */}
+      <ProfilePhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+      />
     </div>
   );
 };

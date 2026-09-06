@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   ShieldCheck, Lock, Mail, User, Phone, CheckCircle2,
-  AlertCircle, ArrowRight, GraduationCap, BookOpen, MapPin
+  AlertCircle, ArrowRight, GraduationCap, BookOpen, MapPin,
+  Camera, Upload
 } from 'lucide-react';
 
 interface AuthPageProps {
@@ -22,8 +23,37 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('+256 ');
   const [location, setLocation] = useState('Mbarara City');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+        const targetDim = 320;
+        canvas.width = targetDim;
+        canvas.height = targetDim;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, startX, startY, size, size, 0, 0, targetDim, targetDim);
+          setAvatarUrl(canvas.toDataURL('image/jpeg', 0.85));
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +71,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           password,
           role,
           phone,
-          location
+          location,
+          avatar_url: avatarUrl || undefined
         });
         onSuccess(newUser.role);
       }
@@ -130,6 +161,44 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     <GraduationCap className="w-4 h-4 text-emerald-700" />
                     <span>Educator / Artisan</span>
                   </button>
+                </div>
+              </div>
+
+              {/* Profile Photo (Optional) */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Profile Photo (Optional)</label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 border border-gray-300 flex items-center justify-center shrink-0">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-[11px] flex items-center gap-1.5"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  </button>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl('')}
+                      className="text-gray-400 hover:text-rose-600 text-[11px]"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
 

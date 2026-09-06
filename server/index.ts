@@ -183,6 +183,39 @@ app.get('/api/auth/me', (req: Request, res: Response) => {
   });
 });
 
+app.patch('/api/users/:id/avatar', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { avatar_url } = req.body;
+
+  if (!avatar_url) {
+    return res.status(400).json({ error: 'avatar_url is required' });
+  }
+
+  const updatedUser = db.updateUser(id, { avatar_url });
+  if (!updatedUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({ user: updatedUser });
+});
+
+app.patch('/api/users/:id', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { name, phone, avatar_url } = req.body;
+
+  const updates: any = {};
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone;
+  if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+
+  const updatedUser = db.updateUser(id, updates);
+  if (!updatedUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({ user: updatedUser });
+});
+
 // ==========================================
 // CATEGORIES & SKILLS
 // ==========================================
@@ -330,11 +363,14 @@ app.post('/api/educators/onboard', (req: Request, res: Response) => {
       role: 'educator',
       name: String(name).trim(),
       phone: phone || '+256 744 024 529',
-      avatar_url: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80`,
+      avatar_url: req.body.avatar_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     db.createUser(user);
+  } else if (req.body.avatar_url) {
+    db.updateUser(user.id, { avatar_url: req.body.avatar_url });
+    user.avatar_url = req.body.avatar_url;
   }
 
   const educatorId = `edu-${Date.now()}`;

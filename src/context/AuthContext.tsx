@@ -11,6 +11,8 @@ interface AuthContextType {
   unreadNotificationCount: number;
   login: (email: string, password: string) => Promise<User>;
   register: (data: any) => Promise<User>;
+  updateAvatar: (avatarUrl: string) => Promise<User>;
+  updateProfile: (updates: Partial<User>) => Promise<User>;
   logout: () => void;
   refreshNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
@@ -96,6 +98,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateAvatar = async (avatarUrl: string): Promise<User> => {
+    if (!user) throw new Error('Not authenticated');
+    setIsLoading(true);
+    try {
+      const res = await api.updateUserAvatar(user.id, avatarUrl);
+      const updatedUser = res.user || { ...user, avatar_url: avatarUrl };
+      setUser(updatedUser);
+      if (educatorProfile && educatorProfile.user) {
+        setEducatorProfile({
+          ...educatorProfile,
+          user: { ...educatorProfile.user, avatar_url: avatarUrl }
+        });
+      }
+      return updatedUser;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProfile = async (updates: Partial<User>): Promise<User> => {
+    if (!user) throw new Error('Not authenticated');
+    setIsLoading(true);
+    try {
+      const res = await api.updateUserProfile(user.id, updates);
+      const updatedUser = res.user || { ...user, ...updates };
+      setUser(updatedUser);
+      return updatedUser;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('iskilllink_user_id');
     setUser(null);
@@ -136,6 +170,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         unreadNotificationCount,
         login,
         register,
+        updateAvatar,
+        updateProfile,
         logout,
         refreshNotifications,
         markNotificationAsRead,

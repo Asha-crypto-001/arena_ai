@@ -3,10 +3,12 @@ import { Educator, Booking, Review, LearnerRequest, Payment, Message } from '../
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { formatUGX, formatShortDate, getStatusBadgeClass } from '../utils/formatters';
+import { ProfilePhotoUploadModal } from '../components/ProfilePhotoUploadModal';
 import {
   GraduationCap, Calendar, Clock, DollarSign, Star,
   MessageSquare, Settings, ShieldCheck, CheckCircle2,
-  XCircle, ArrowRight, UserCheck, Wrench, FileText, Send, Sparkles
+  XCircle, ArrowRight, UserCheck, Wrench, FileText, Send, Sparkles,
+  Camera, User
 } from 'lucide-react';
 
 interface EducatorDashboardProps {
@@ -26,6 +28,7 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState<{ [reviewId: string]: string }>({});
   const [loading, setLoading] = useState(true);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   const loadDashboardData = async () => {
     try {
@@ -97,11 +100,20 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
       {/* Top Banner */}
       <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <img
-            src={user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
-            alt={user?.name}
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow"
-          />
+          <div className="relative group">
+            <img
+              src={user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
+              alt={user?.name}
+              className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow"
+            />
+            <button
+              onClick={() => setShowPhotoModal(true)}
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-emerald-600 text-white shadow hover:bg-emerald-500 transition"
+              title="Change Profile Photo"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded flex items-center gap-1">
@@ -126,8 +138,15 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Update Photo</span>
+          </button>
+          <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
             Status: {educator?.status?.toUpperCase()}
           </span>
         </div>
@@ -485,9 +504,39 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
       {/* PROFILE & SETTINGS TAB */}
       {activeTab === 'profile' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6 max-w-3xl">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Educator Workshop & Rate Settings</h2>
-            <p className="text-xs text-gray-500">Manage your publicly displayed rates in UGX and workshop tooling.</p>
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Educator Workshop & Rate Settings</h2>
+              <p className="text-xs text-gray-500">Manage your publicly displayed rates in UGX and workshop tooling.</p>
+            </div>
+            <button
+              onClick={() => setShowPhotoModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-1.5"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Update Workshop Photo</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <img
+                src={user?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'}
+                alt={user?.name}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm"
+              />
+              <button
+                onClick={() => setShowPhotoModal(true)}
+                className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-emerald-700 text-white shadow hover:bg-emerald-800 transition"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-gray-900">{user?.name}</div>
+              <div className="text-xs text-gray-500">{educator?.title}</div>
+              <div className="text-[11px] text-emerald-700 font-semibold mt-0.5">Verified Instructor • {educator?.location}</div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -518,6 +567,12 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
           </div>
         </div>
       )}
+
+      {/* Global Profile Photo Upload Modal */}
+      <ProfilePhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+      />
     </div>
   );
 };

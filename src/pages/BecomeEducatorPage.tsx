@@ -29,6 +29,32 @@ export const BecomeEducatorPage: React.FC<BecomeEducatorPageProps> = ({
   const [whatsapp, setWhatsapp] = useState('');
   const [location, setLocation] = useState('Mbarara City');
   const [nationalIdNumber, setNationalIdNumber] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+        const targetDim = 320;
+        canvas.width = targetDim;
+        canvas.height = targetDim;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, startX, startY, size, size, 0, 0, targetDim, targetDim);
+          setAvatarUrl(canvas.toDataURL('image/jpeg', 0.85));
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Step 2: Educator Type & Experience
   const [educatorType, setEducatorType] = useState<'artisan' | 'professional' | 'trainer' | 'practitioner' | 'mentor'>('artisan');
@@ -128,6 +154,7 @@ export const BecomeEducatorPage: React.FC<BecomeEducatorPageProps> = ({
         hourly_rate_ugx: hourlyRateUGX,
         package_rate_ugx: packageRateUGX,
         national_id_number: nationalIdNumber || 'CM-APP-PENDING',
+        avatar_url: avatarUrl || undefined,
         skills: [
           {
             skill_name: primarySkill,
@@ -370,6 +397,34 @@ export const BecomeEducatorPage: React.FC<BecomeEducatorPageProps> = ({
                   className="w-full text-xs rounded-lg border-gray-300 border p-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                 />
                 <span className="text-[10px] text-gray-400 mt-0.5 block">Used strictly for identity verification.</span>
+              </div>
+
+              <div className="sm:col-span-2 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Educator Profile Photo (Optional)
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-100 border border-gray-300 flex items-center justify-center shrink-0 shadow-sm">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 cursor-pointer transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{avatarUrl ? 'Change Photo' : 'Upload Profile Photo'}</span>
+                      <input
+                        type="file"
+                        onChange={handleAvatarFile}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-[11px] text-gray-500 mt-1">Photo appears on your verified mentor card across Uganda.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
