@@ -256,12 +256,20 @@ export const api = {
 
   // Admin Operations
   async getAdminMetrics() {
-    const res = await fetch(`${API_BASE}/admin/metrics`);
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
+    const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
+    const res = await fetch(`${API_BASE}/admin/metrics`, {
+      headers: { 'x-user-id': userId }
+    });
     return handleResponse<AdminMetrics>(res);
   },
 
   async getVerificationQueue() {
-    const res = await fetch(`${API_BASE}/admin/verification-queue`);
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
+    const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
+    const res = await fetch(`${API_BASE}/admin/verification-queue`, {
+      headers: { 'x-user-id': userId }
+    });
     return handleResponse<Educator[]>(res);
   },
 
@@ -272,25 +280,39 @@ export const api = {
     notes?: string;
     admin_name?: string;
   }) {
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
+    const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
     const res = await fetch(`${API_BASE}/admin/verification-step`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
       body: JSON.stringify(data)
     });
     return handleResponse<{ success: boolean; verification: any }>(res);
   },
 
   async updateEducatorStatus(educatorId: string, status: string, notes?: string, adminName?: string) {
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
+    const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
     const res = await fetch(`${API_BASE}/admin/educator-status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
       body: JSON.stringify({ educator_id: educatorId, status, notes, admin_name: adminName })
     });
     return handleResponse<{ success: boolean; educator: Educator }>(res);
   },
 
   async getAuditLogs() {
-    const res = await fetch(`${API_BASE}/admin/audit-logs`);
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
+    const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
+    const res = await fetch(`${API_BASE}/admin/audit-logs`, {
+      headers: { 'x-user-id': userId }
+    });
     return handleResponse<AdminAction[]>(res);
   },
 

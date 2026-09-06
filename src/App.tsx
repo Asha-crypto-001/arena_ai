@@ -19,6 +19,7 @@ import { Educator } from './types';
 import { api } from './services/api';
 
 const AppContent: React.FC = () => {
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<string>('home');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedEducatorForModal, setSelectedEducatorForModal] = useState<Educator | null>(null);
@@ -153,7 +154,29 @@ const AppContent: React.FC = () => {
         )}
 
         {currentView === 'admin-dashboard' && (
-          <AdminDashboard />
+          user && user.role === 'admin' && user.email === 'ashabahebwahassan665@gmail.com' ? (
+            <AdminDashboard />
+          ) : (
+            <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200 shadow-sm">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-black text-gray-900">Restricted Administrator Area</h2>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                This operations portal is private and restricted strictly to Founder & Platform Administrator <strong>Ashabahebwa Hassan</strong>.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => setCurrentView('auth')}
+                  className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow hover:bg-slate-800 transition"
+                >
+                  Admin Sign In
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {currentView === 'auth' && (

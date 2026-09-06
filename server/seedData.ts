@@ -54,7 +54,7 @@ export const initialUsers: User[] = [
   {
     id: 'usr-admin-ashabahebwa',
     email: process.env.ADMIN_EMAIL || 'ashabahebwahassan665@gmail.com',
-    password_hash: process.env.ADMIN_PASSWORD || 'admin123',
+    password_hash: process.env.ADMIN_PASSWORD || 'Ash@0001$',
     role: 'admin',
     name: 'Ashabahebwa Hassan',
     phone: '+256 744 024 529',
