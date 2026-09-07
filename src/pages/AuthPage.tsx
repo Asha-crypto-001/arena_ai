@@ -86,16 +86,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   return (
     <div className="max-w-md mx-auto px-4 py-12 space-y-6">
       {/* Brand Header */}
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-2xl mx-auto shadow-md">
-          iS
+      <div className="text-center space-y-3">
+        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-stone-200/90 p-2.5 mx-auto flex items-center justify-center">
+          <img
+            src="./logo.png"
+            alt="iSkillLink Logo"
+            className="w-full h-full object-contain rounded-xl"
+          />
         </div>
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-          {mode === 'login' ? 'Sign In to iSkillLink' : 'Create an Account'}
-        </h1>
-        <p className="text-xs text-gray-500">
-          Where Skills Meet Opportunity • Mbarara, Uganda
-        </p>
+        <div>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+            {mode === 'login' ? 'Sign In to iSkillLink' : 'Create an Account'}
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Where Skills Meet Opportunity • Mbarara, Uganda
+          </p>
+        </div>
       </div>
 
       {/* Main Auth Card */}

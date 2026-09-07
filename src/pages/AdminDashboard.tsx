@@ -194,25 +194,34 @@ export const AdminDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Operations Header */}
       <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Platform Operations & Trust Center
-            </span>
-            <span className="text-xs text-slate-400">Mbarara HQ, Western Uganda</span>
+        <div className="flex items-start sm:items-center gap-4">
+          <div className="w-12 h-12 bg-white rounded-2xl shadow-md border border-white/20 p-1.5 flex items-center justify-center shrink-0">
+            <img
+              src="./logo.png"
+              alt="iSkillLink Logo"
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight mt-1">
-            iSkillLink Operations Dashboard
-          </h1>
-          <p className="text-xs text-slate-300 mt-0.5">
-            Admin oversight: Verification queues, user directory & contacts, demand intelligence, secondary admin delegation, and escrow ledger.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800 px-2 py-0.5 rounded flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Platform Operations & Trust Center
+              </span>
+              <span className="text-xs text-slate-400">Mbarara HQ, Western Uganda</span>
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight mt-1">
+              iSkillLink Operations Dashboard
+            </h1>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Admin oversight: Verification queues, user directory & contacts, demand intelligence, secondary admin delegation, and escrow ledger.
+            </p>
+          </div>
         </div>
 
         <button
           onClick={loadAdminData}
-          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition"
+          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition shrink-0"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Refresh Data</span>

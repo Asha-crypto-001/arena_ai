@@ -115,24 +115,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center justify-between h-16 sm:h-[68px]">
             {/* Brand Logo & Seal */}
             <button
-              onClick={() => setCurrentView('home')}
+              onClick={() => {
+                setCurrentView('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="flex items-center gap-3 text-left focus:outline-none group shrink-0"
             >
-              {/* Nostalgic Guild Shield Monogram */}
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0c392b] to-[#06241a] border border-[#1e5c46] text-amber-400 flex items-center justify-center font-serif font-black text-xl tracking-tight shadow-sm group-hover:scale-[1.02] transition">
-                  iS
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900"></span>
-                </div>
+              {/* Official Brand Logo */}
+              <div className="relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-white rounded-xl shadow-xs border border-stone-200/90 p-1 group-hover:scale-105 group-hover:border-emerald-500/50 transition shrink-0">
+                <img
+                  src="./logo.png"
+                  alt="iSkillLink Logo"
+                  className="w-full h-full object-contain rounded-lg"
+                />
               </div>
 
               {/* Brand Typography */}
               <div>
                 <div className="text-lg sm:text-xl font-bold tracking-tight text-stone-900 font-serif flex items-center gap-1.5 leading-none">
                   iSkillLink
-                  <span className="text-[9px] font-sans font-extrabold uppercase tracking-widest bg-stone-100 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300">
+                  <span className="text-[9px] font-sans font-extrabold uppercase tracking-widest bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
                     UG
                   </span>
                 </div>

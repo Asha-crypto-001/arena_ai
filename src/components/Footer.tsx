@@ -46,9 +46,19 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Col 1: Brand Info */}
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">
-                iS
+            <button
+              onClick={() => {
+                setCurrentView('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex items-center gap-3 text-left group"
+            >
+              <div className="w-11 h-11 bg-white rounded-xl shadow-md border border-white/20 p-1.5 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <img
+                  src="./logo.png"
+                  alt="iSkillLink Logo"
+                  className="w-full h-full object-contain rounded-lg"
+                />
               </div>
               <div>
                 <div className="text-xl font-bold text-white tracking-tight">
@@ -58,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
                   Founder: Ashabahebwa Hassan
                 </div>
               </div>
-            </div>
+            </button>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
               iSkillLink connects learners seeking practical, vocational, technical, and creative skills with verified Ugandan practitioners, master artisans, and professionals.
             </p>
