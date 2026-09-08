@@ -1,11 +1,35 @@
-import React from 'react';
-import { ShieldCheck, MapPin, Phone, Mail, Award, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, MapPin, Phone, Mail, Award, CheckCircle, Send, CheckCircle2 } from 'lucide-react';
 
 interface FooterProps {
   setCurrentView: (view: string) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
+  const [footerEmail, setFooterEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleFooterSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!footerEmail || !footerEmail.includes('@')) return;
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('iskilllink_newsletter_subscribers') || '[]');
+      existing.push({ email: footerEmail, source: 'footer', date: new Date().toISOString() });
+      localStorage.setItem('iskilllink_newsletter_subscribers', JSON.stringify(existing));
+    } catch {
+      // ignore
+    }
+
+    const subject = encodeURIComponent(`Newsletter Subscription: ${footerEmail}`);
+    const body = encodeURIComponent(
+      `Hello iSkillLink Uganda,\n\nPlease subscribe this email (${footerEmail}) to practical skills news and workshops in Uganda.\n\nThank you!`
+    );
+
+    setSubscribed(true);
+    window.open(`mailto:iskilllink1@gmail.com?subject=${subject}&body=${body}`, '_blank');
+  };
+
   return (
     <footer className="bg-slate-900 text-slate-300 border-t border-slate-800">
       {/* Top trust highlights */}
@@ -83,7 +107,10 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>ashabahebwahassan665@gmail.com</span>
+                <div className="flex flex-col">
+                  <span><a href="mailto:iskilllink1@gmail.com" className="text-emerald-400 hover:underline">iskilllink1@gmail.com</a> (Inquiries & Newsletter)</span>
+                  <span className="text-slate-400"><a href="mailto:ashabahebwahassan665@gmail.com" className="hover:underline">ashabahebwahassan665@gmail.com</a> (Founder)</span>
+                </div>
               </div>
             </div>
           </div>
@@ -140,7 +167,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
               </li>
               <li>
                 <button onClick={() => setCurrentView('become-educator')} className="hover:text-emerald-400 transition">
-                  Become an Educator
+                  Teach on iSkillLink
                 </button>
               </li>
               <li>
@@ -161,29 +188,51 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
             </ul>
           </div>
 
-          {/* Col 4: Trust & Legal */}
+          {/* Col 4: Newsletter & Trust */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-100 mb-4">
-              Trust & Standards
+              Newsletter
             </h3>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li className="flex items-center gap-1.5 text-xs text-slate-300">
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">
+              Get practical skill workshops and artisan alerts sent to <strong className="text-slate-200">iskilllink1@gmail.com</strong>.
+            </p>
+            {subscribed ? (
+              <div className="bg-emerald-950/80 border border-emerald-700/60 rounded-xl p-3 text-xs text-emerald-200 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Subscribed! Check email client.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleFooterSubscribe} className="space-y-2">
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={footerEmail}
+                    onChange={(e) => setFooterEmail(e.target.value)}
+                    placeholder="your.email@gmail.com"
+                    required
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5"
+                >
+                  <span>Subscribe</span>
+                  <Send className="w-3 h-3" />
+                </button>
+              </form>
+            )}
+
+            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Ugandan DIT / ERA Aligned
-              </li>
-              <li className="flex items-center gap-1.5 text-xs text-slate-300">
+                <span>Escrow Protected (MTN & Airtel)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Escrow Payment Protection
-              </li>
-              <li className="flex items-center gap-1.5 text-xs text-slate-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Educator Code of Conduct
-              </li>
-              <li className="flex items-center gap-1.5 text-xs text-slate-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Safe Workshop Guidelines
-              </li>
-            </ul>
+                <span>Vetted Ugandan Artisans</span>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -27,7 +27,7 @@ export interface User {
   admin_assigned_at?: string;
   interests?: string[];
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface Learner {

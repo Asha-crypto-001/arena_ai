@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Category, Educator, Skill } from '../types';
 import { api } from '../services/api';
 import { EducatorCard } from '../components/EducatorCard';
+import { NewsletterSection } from '../components/NewsletterSection';
 import { formatUGX } from '../utils/formatters';
 import {
   Search, ShieldCheck, CheckCircle2, ArrowRight, Star,
@@ -365,16 +366,50 @@ export const HomePage: React.FC<HomePageProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredEducators.slice(0, 6).map(edu => (
-            <EducatorCard
-              key={edu.id}
-              educator={edu}
-              onViewProfile={onViewEducator}
-              onRequestBooking={onRequestBooking}
-            />
-          ))}
-        </div>
+        {featuredEducators.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredEducators.slice(0, 6).map(edu => (
+              <EducatorCard
+                key={edu.id}
+                educator={edu}
+                onViewProfile={onViewEducator}
+                onRequestBooking={onRequestBooking}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-br from-white to-emerald-50/40 rounded-3xl border border-emerald-100 p-8 sm:p-12 text-center shadow-sm space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs">
+              <Award className="w-8 h-8" />
+            </div>
+            <div className="max-w-xl mx-auto space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200">
+                Educator Onboarding Open • Mbarara & Across Uganda
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                Be Among the First Verified Educators on iSkillLink
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                We are actively onboarding verified artisans, technicians, software developers, pastry chefs, and master practitioners. Teach your craft, set your UGX pricing, and mentor motivated Ugandan apprentices.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setCurrentView('become-educator')}
+                className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-sm flex items-center gap-2"
+              >
+                <span>Apply to Teach Practical Skills</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onOpenSkillRequest}
+                className="px-6 py-3 rounded-xl bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs sm:text-sm border border-gray-300 transition shadow-xs"
+              >
+                Request a Custom Skill
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Educator CTA Banner */}
@@ -404,6 +439,11 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Newsletter Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <NewsletterSection />
+      </div>
     </div>
   );
 };

@@ -215,7 +215,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Sarah Namubiru"
+                    placeholder="e.g. Your Full Name"
                     className="w-full p-2.5 pl-8 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
                     required
                   />

@@ -75,7 +75,10 @@ export const ContactPage: React.FC = () => {
 
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>ashabahebwahassan665@gmail.com</span>
+                <div>
+                  <div><a href="mailto:iskilllink1@gmail.com" className="hover:text-emerald-300 underline font-medium">iskilllink1@gmail.com</a> (Official Inquiries)</div>
+                  <div className="text-slate-400 mt-0.5"><a href="mailto:ashabahebwahassan665@gmail.com" className="hover:text-emerald-300 underline">ashabahebwahassan665@gmail.com</a> (Founder)</div>
+                </div>
               </div>
 
               <div className="flex items-start gap-3">
@@ -114,7 +117,7 @@ export const ContactPage: React.FC = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Sarah Namubiru"
+                    placeholder="e.g. Your Full Name"
                     className="w-full p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
                     required
                   />
@@ -126,7 +129,7 @@ export const ContactPage: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. sarah@gmail.com"
+                    placeholder="e.g. yourname@example.com"
                     className="w-full p-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
                     required
                   />

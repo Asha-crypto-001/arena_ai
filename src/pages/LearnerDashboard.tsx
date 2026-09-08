@@ -233,7 +233,7 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 flex flex-wrap items-center gap-3 mt-1">
-                        <span>Educator: <strong className="text-gray-800">{b.educator?.user?.name || 'Joseph Mukasa'}</strong></span>
+                        <span>Educator: <strong className="text-gray-800">{b.educator?.user?.name || 'Verified Educator'}</strong></span>
                         <span>•</span>
                         <span>{formatShortDate(b.scheduled_date)} at {b.start_time}</span>
                         <span>•</span>
@@ -360,7 +360,7 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 mt-1">
-                      Mentor: <strong className="text-gray-900">{b.educator?.user?.name || 'Joseph Mukasa'}</strong> ({b.educator?.title})
+                      Mentor: <strong className="text-gray-900">{b.educator?.user?.name || 'Verified Educator'}</strong> {b.educator?.title ? `(${b.educator.title})` : ''}
                     </p>
                   </div>
 
@@ -485,27 +485,35 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Contacts list */}
             <div className="space-y-2 border-r border-gray-100 pr-4">
-              <div className="text-xs font-bold text-gray-700 uppercase mb-2">Educators</div>
-              {[
-                { id: 'usr-edu-1', name: 'Joseph Mukasa', role: 'Master Tailor (Kiyembe)' },
-                { id: 'usr-edu-2', name: 'Dr. Irene Kembabazi', role: 'Full-Stack Mentor' }
-              ].map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedRecipientId(c.id)}
-                  className={`w-full p-3 rounded-xl text-left text-xs transition border flex items-center justify-between ${
-                    selectedRecipientId === c.id
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
-                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <div>
-                    <div className="font-bold text-gray-900">{c.name}</div>
-                    <div className="text-[11px] text-gray-500">{c.role}</div>
-                  </div>
-                  {selectedRecipientId === c.id && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
-                </button>
-              ))}
+              <div className="text-xs font-bold text-gray-700 uppercase mb-2">My Instructors</div>
+              {bookings.filter(b => b.educator?.user).length > 0 ? (
+                Array.from(new Set(bookings.map(b => b.educator?.user?.id))).map(userId => {
+                  const b = bookings.find(bk => bk.educator?.user?.id === userId);
+                  if (!b || !b.educator?.user) return null;
+                  return (
+                    <button
+                      key={userId}
+                      onClick={() => setSelectedRecipientId(userId)}
+                      className={`w-full p-3 rounded-xl text-left text-xs transition border flex items-center justify-between ${
+                        selectedRecipientId === userId
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                          : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-bold text-gray-900">{b.educator.user.name}</div>
+                        <div className="text-[11px] text-gray-500">{b.educator.title}</div>
+                      </div>
+                      {selectedRecipientId === userId && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-center text-xs text-gray-500">
+                  <p className="font-medium text-gray-700 mb-1">No active educators yet</p>
+                  <p className="text-[11px]">Book a hands-on session or post a skill request to start a direct message thread.</p>
+                </div>
+              )}
             </div>
 
             {/* Message Thread */}

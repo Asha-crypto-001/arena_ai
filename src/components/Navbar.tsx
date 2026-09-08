@@ -91,6 +91,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Contact & WhatsApp hotline */}
             <div className="flex items-center gap-3 text-[11px] shrink-0 font-medium text-stone-300">
               <a
+                href="mailto:iskilllink1@gmail.com"
+                className="hidden md:flex items-center gap-1 text-stone-300 hover:text-amber-300 transition"
+              >
+                <Mail className="w-3 h-3 text-emerald-400" />
+                <span>iskilllink1@gmail.com</span>
+              </a>
+              <span className="text-stone-700 hidden md:inline">|</span>
+              <a
                 href="https://wa.me/256744024529"
                 target="_blank"
                 rel="noopener noreferrer"

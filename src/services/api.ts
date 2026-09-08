@@ -42,22 +42,45 @@ function setLocalStorageData<T>(key: string, value: T): void {
 
 // Ensure initial seed data is loaded into local storage
 if (typeof window !== 'undefined') {
-  if (!localStorage.getItem('iskilllink_users')) {
+  // Clean up any old placeholder educator accounts or Sarah Namubiru from local storage
+  const rawUsers = localStorage.getItem('iskilllink_users');
+  if (!rawUsers) {
     setLocalStorageData('users', initialLocalUsers);
   } else {
-    // Ensure admin user password is up to date in client storage
-    const users: any[] = getLocalStorageData('users', initialLocalUsers);
-    const admin = users.find(u => u.email === 'ashabahebwahassan665@gmail.com' || u.role === 'admin');
-    if (admin) {
-      admin.password_hash = 'Ash@0001$';
-      admin.role = 'admin';
-      admin.name = 'Ashabahebwa Hassan';
-      setLocalStorageData('users', users);
+    try {
+      const parsedUsers: any[] = JSON.parse(rawUsers);
+      const filteredUsers = parsedUsers.filter(u => 
+        u.email === 'ashabahebwahassan665@gmail.com' || 
+        (!u.email?.endsWith('@iskilllink.ug') && u.email !== 'sarah.namubiru@gmail.com')
+      );
+      const admin = filteredUsers.find(u => u.email === 'ashabahebwahassan665@gmail.com' || u.role === 'admin');
+      if (admin) {
+        admin.password_hash = 'Ash@0001$';
+        admin.role = 'admin';
+        admin.name = 'Ashabahebwa Hassan';
+      }
+      setLocalStorageData('users', filteredUsers);
+    } catch {
+      setLocalStorageData('users', initialLocalUsers);
     }
   }
+
+  // Clean old educators if containing imaginary accounts
+  const rawEducators = localStorage.getItem('iskilllink_educators');
+  if (!rawEducators) {
+    setLocalStorageData('educators', initialLocalEducators);
+  } else {
+    try {
+      const parsedEdu: any[] = JSON.parse(rawEducators);
+      const filteredEdu = parsedEdu.filter(e => !e.id?.startsWith('edu-') || e.id?.length > 10);
+      setLocalStorageData('educators', filteredEdu);
+    } catch {
+      setLocalStorageData('educators', initialLocalEducators);
+    }
+  }
+
   if (!localStorage.getItem('iskilllink_categories')) setLocalStorageData('categories', initialLocalCategories);
   if (!localStorage.getItem('iskilllink_skills')) setLocalStorageData('skills', initialLocalSkills);
-  if (!localStorage.getItem('iskilllink_educators')) setLocalStorageData('educators', initialLocalEducators);
   if (!localStorage.getItem('iskilllink_learners')) setLocalStorageData('learners', initialLocalLearners);
   if (!localStorage.getItem('iskilllink_bookings')) setLocalStorageData('bookings', initialLocalBookings);
   if (!localStorage.getItem('iskilllink_payments')) setLocalStorageData('payments', initialLocalPayments);

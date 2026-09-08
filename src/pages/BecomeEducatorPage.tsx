@@ -324,7 +324,7 @@ export const BecomeEducatorPage: React.FC<BecomeEducatorPageProps> = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Joseph Mukasa"
+                  placeholder="e.g. Your Full Legal Name"
                   className="w-full text-xs rounded-lg border-gray-300 border p-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                   required
                 />

@@ -294,7 +294,7 @@ export const EducatorDashboard: React.FC<EducatorDashboardProps> = () => {
                       </span>
                     </div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Learner: <strong className="text-gray-900">{b.learnerUser?.name || 'Sarah Namubiru'}</strong> ({b.learnerUser?.phone || '+256 701 455 890'})
+                      Learner: <strong className="text-gray-900">{b.learnerUser?.name || 'Registered Student'}</strong> {b.learnerUser?.phone ? `(${b.learnerUser.phone})` : ''}
                     </div>
                   </div>
 

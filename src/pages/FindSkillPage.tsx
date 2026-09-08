@@ -368,28 +368,34 @@ export const FindSkillPage: React.FC<FindSkillPageProps> = ({
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-100">
                 <Search className="w-6 h-6" />
               </div>
-              <div className="max-w-md mx-auto space-y-1">
-                <h3 className="font-bold text-gray-900 text-base">No educators found matching your filters</h3>
-                <p className="text-xs text-gray-500">
-                  Try broadening your search query, clearing filters, or submit a custom skill request so we can find an educator for you.
+              <div className="max-w-md mx-auto space-y-2">
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {hasActiveFilters ? 'No educators matching selected filters' : 'Educator Onboarding in Progress'}
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {hasActiveFilters
+                    ? 'Try broadening your search query, clearing filter criteria, or submit a custom skill request.'
+                    : 'We are actively onboarding verified artisans, trade masters, and practitioners across Mbarara and Uganda. Post what you want to learn, and our team will connect you with a vetted instructor.'}
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={resetFilters}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Reset Filters
-                </button>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                {hasActiveFilters && (
+                  <button
+                    onClick={resetFilters}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    Reset Filters
+                  </button>
+                )}
                 <button
                   onClick={onOpenSkillRequest}
-                  className="px-4 py-2 rounded-lg bg-emerald-700 text-xs font-bold text-white hover:bg-emerald-800 shadow-sm"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-700 text-xs font-bold text-white hover:bg-emerald-800 shadow-sm transition"
                 >
-                  Post Custom Request
+                  Post Custom Skill Request
                 </button>
               </div>
             </div>

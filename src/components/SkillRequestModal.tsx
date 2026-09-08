@@ -31,9 +31,9 @@ export const SkillRequestModal: React.FC<SkillRequestModalProps> = ({
   const [frequency, setFrequency] = useState('2 sessions per week (4 weeks)');
   const [budgetUGX, setBudgetUGX] = useState<number>(250000);
   const [additionalNotes, setAdditionalNotes] = useState('');
-  const [learnerName, setLearnerName] = useState(user?.name || 'Sarah Namubiru');
-  const [learnerEmail, setLearnerEmail] = useState(user?.email || 'sarah.namubiru@gmail.com');
-  const [contactPhone, setContactPhone] = useState(user?.phone || '+256 701 455 890');
+  const [learnerName, setLearnerName] = useState(user?.name || '');
+  const [learnerEmail, setLearnerEmail] = useState(user?.email || '');
+  const [contactPhone, setContactPhone] = useState(user?.phone || '');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
