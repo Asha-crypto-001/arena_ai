@@ -14,6 +14,13 @@ const PORT: number = Number(process.env.PORT) || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Helper to sanitize sensitive credentials before sending to client
+function sanitizeUser(user: any) {
+  if (!user) return null;
+  const { password_hash, ...safeUser } = user;
+  return safeUser;
+}
+
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[API] ${req.method} ${req.path}`);
@@ -49,7 +56,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   }
 
   res.json({
-    user,
+    user: sanitizeUser(user),
     learnerProfile,
     educatorProfile,
     token: `token-${user.id}-${Date.now()}`
@@ -146,7 +153,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
   }
 
   res.status(201).json({
-    user: newUser,
+    user: sanitizeUser(newUser),
     learnerProfile,
     educatorProfile,
     token: `token-${newUser.id}-${Date.now()}`
@@ -177,7 +184,7 @@ app.get('/api/auth/me', (req: Request, res: Response) => {
   }
 
   res.json({
-    user,
+    user: sanitizeUser(user),
     learnerProfile,
     educatorProfile
   });
@@ -1198,7 +1205,7 @@ app.get('/api/admin/audit-logs', (req: Request, res: Response) => {
 
 // Admin User Directory & Role Assignment
 app.get('/api/admin/users', (req: Request, res: Response) => {
-  const users = db.getAllUsersDetailed();
+  const users = db.getAllUsersDetailed().map(u => sanitizeUser(u));
   res.json(users);
 });
 
