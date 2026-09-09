@@ -22,7 +22,7 @@ export const NewsletterSection: React.FC = () => {
       // ignore
     }
 
-    // Trigger direct mailto route to iskilllink1@gmail.com
+    // Trigger direct mailto route to iskilllink0@gmail.com
     const subject = encodeURIComponent(`Newsletter Subscription: ${email}`);
     const body = encodeURIComponent(
       `Hello iSkillLink Team,\n\nPlease subscribe this email to iSkillLink practical skill masterclasses, artisan workshops, and updates in Uganda.\n\nSubscriber Email: ${email}\nPreferred Trade Focus: ${interest}\nDate: ${new Date().toLocaleDateString()}\n\nThank you!`
@@ -32,7 +32,7 @@ export const NewsletterSection: React.FC = () => {
       setLoading(false);
       setIsSubmitted(true);
       // Open mailto link
-      window.open(`mailto:iskilllink1@gmail.com?subject=${subject}&body=${body}`, '_blank');
+      window.open(`mailto:iskilllink0@gmail.com?subject=${subject}&body=${body}`, '_blank');
     }, 400);
   };
 
@@ -65,8 +65,8 @@ export const NewsletterSection: React.FC = () => {
             <h3 className="font-bold text-base text-white">You're Subscribed!</h3>
             <p className="text-xs text-emerald-100">
               Your subscription for <strong className="text-white">{email}</strong> has been routed to{' '}
-              <a href="mailto:iskilllink1@gmail.com" className="underline font-bold text-amber-300">
-                iskilllink1@gmail.com
+              <a href="mailto:iskilllink0@gmail.com" className="underline font-bold text-amber-300">
+                iskilllink0@gmail.com
               </a>
               . We look forward to connecting you with hands-on skill opportunities!
             </p>
@@ -121,7 +121,7 @@ export const NewsletterSection: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
               <div className="text-[11px] text-emerald-200/80 flex items-center gap-1.5 text-center sm:text-left">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                <span>Routed to <strong className="text-white">iskilllink1@gmail.com</strong> • No spam, unsubscribe anytime.</span>
+                <span>Routed to <strong className="text-white">iskilllink0@gmail.com</strong> • No spam, unsubscribe anytime.</span>
               </div>
 
               <button

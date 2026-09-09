@@ -85,7 +85,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({
           </div>
           <h3 className="text-xl font-bold text-white">Founded by Ashabahebwa Hassan</h3>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Leading practical vocational advancement from Mbarara City, Western Region, across Uganda and East Africa. Contact our office via WhatsApp at <strong>+256 744 024 529</strong> / <strong>+256 772 233 621</strong> or email <a href="mailto:iskilllink1@gmail.com" className="text-emerald-400 underline">iskilllink1@gmail.com</a>.
+            Leading practical vocational advancement from Mbarara City, Western Region, across Uganda and East Africa. Contact our office via WhatsApp at <strong>+256 744 024 529</strong> / <strong>+256 772 233 621</strong> or email <a href="mailto:iskilllink0@gmail.com" className="text-emerald-400 underline">iskilllink0@gmail.com</a>.
           </p>
         </div>
 

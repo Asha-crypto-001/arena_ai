@@ -27,7 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
     );
 
     setSubscribed(true);
-    window.open(`mailto:iskilllink1@gmail.com?subject=${subject}&body=${body}`, '_blank');
+    window.open(`mailto:iskilllink0@gmail.com?subject=${subject}&body=${body}`, '_blank');
   };
 
   return (
@@ -108,7 +108,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div className="flex flex-col">
-                  <span><a href="mailto:iskilllink1@gmail.com" className="text-emerald-400 hover:underline">iskilllink1@gmail.com</a> (Inquiries & Newsletter)</span>
+                  <span><a href="mailto:iskilllink0@gmail.com" className="text-emerald-400 hover:underline">iskilllink0@gmail.com</a> (Inquiries & Newsletter)</span>
                   <span className="text-slate-400"><a href="mailto:ashabahebwahassan665@gmail.com" className="hover:underline">ashabahebwahassan665@gmail.com</a> (Founder)</span>
                 </div>
               </div>
@@ -194,7 +194,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView }) => {
               Newsletter
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed mb-3">
-              Get practical skill workshops and artisan alerts sent to <strong className="text-slate-200">iskilllink1@gmail.com</strong>.
+              Get practical skill workshops and artisan alerts sent to <strong className="text-slate-200">iskilllink0@gmail.com</strong>.
             </p>
             {subscribed ? (
               <div className="bg-emerald-950/80 border border-emerald-700/60 rounded-xl p-3 text-xs text-emerald-200 flex items-center gap-2">

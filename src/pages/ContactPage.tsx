@@ -76,7 +76,7 @@ export const ContactPage: React.FC = () => {
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div><a href="mailto:iskilllink1@gmail.com" className="hover:text-emerald-300 underline font-medium">iskilllink1@gmail.com</a> (Official Inquiries)</div>
+                  <div><a href="mailto:iskilllink0@gmail.com" className="hover:text-emerald-300 underline font-medium">iskilllink0@gmail.com</a> (Official Inquiries)</div>
                   <div className="text-slate-400 mt-0.5"><a href="mailto:ashabahebwahassan665@gmail.com" className="hover:text-emerald-300 underline">ashabahebwahassan665@gmail.com</a> (Founder)</div>
                 </div>
               </div>
