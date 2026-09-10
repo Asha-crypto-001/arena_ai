@@ -308,3 +308,41 @@ VALUES (
     'HQ-MBARARA',
     'Founder Ashabahebwa Hassan initialized iSkillLink Uganda operations database based in Mbarara City.'
 ) ON CONFLICT (id) DO NOTHING;
+
+-- ========================================================================
+-- ROW-LEVEL SECURITY (RLS) POLICIES (Defense-in-Depth)
+-- ========================================================================
+
+-- Enable Row-Level Security on all core tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE educators ENABLE ROW LEVEL SECURITY;
+ALTER TABLE learners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE learner_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+
+-- 1. Categories & Skills: Publicly readable by anyone
+CREATE POLICY "Categories are viewable by everyone" ON categories FOR SELECT USING (true);
+CREATE POLICY "Skills are viewable by everyone" ON skills FOR SELECT USING (true);
+
+-- 2. Active Educators: Publicly readable by anyone in discovery
+CREATE POLICY "Active educators viewable by everyone" ON educators FOR SELECT USING (status IN ('active', 'approved'));
+
+-- 3. Reviews: Moderated reviews publicly viewable
+CREATE POLICY "Moderated reviews viewable by everyone" ON reviews FOR SELECT USING (is_moderated = true);
+
+-- 4. Newsletter Subscriptions: Anyone can subscribe
+CREATE POLICY "Anyone can subscribe to newsletter" ON newsletter_subscribers FOR INSERT WITH CHECK (true);
+
+-- 5. Service Role / Backend Bypass (Full privileges for backend API service role)
+-- Note: When your isolated Node.js backend connects using connection pooling or service keys,
+-- it operates with full data orchestration privileges.
+
