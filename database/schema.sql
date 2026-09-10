@@ -102,7 +102,52 @@ CREATE TABLE IF NOT EXISTS learners (
 );
 
 -- ------------------------------------------------------------------------
--- 6. EDUCATOR VERIFICATION MATRIX
+-- 6. EDUCATOR SKILLS & MAPPINGS
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS educator_skills (
+    id VARCHAR(64) PRIMARY KEY,
+    educator_id VARCHAR(64) REFERENCES educators(id) ON DELETE CASCADE,
+    skill_id VARCHAR(64) REFERENCES skills(id) ON DELETE SET NULL,
+    skill_name VARCHAR(255) NOT NULL,
+    category_id VARCHAR(64) REFERENCES categories(id) ON DELETE SET NULL,
+    proficiency_level VARCHAR(32) DEFAULT 'advanced',
+    hourly_rate_ugx NUMERIC(12, 2),
+    description TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_educator_skills_edu ON educator_skills(educator_id);
+
+-- ------------------------------------------------------------------------
+-- 7. QUALIFICATIONS & CERTIFICATIONS
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualifications (
+    id VARCHAR(64) PRIMARY KEY,
+    educator_id VARCHAR(64) REFERENCES educators(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    institution VARCHAR(255) NOT NULL,
+    year INT,
+    verified BOOLEAN DEFAULT FALSE,
+    document_url TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualifications_edu ON qualifications(educator_id);
+
+-- ------------------------------------------------------------------------
+-- 8. WORKSHOP PORTFOLIOS & PROJECTS
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS portfolios (
+    id VARCHAR(64) PRIMARY KEY,
+    educator_id VARCHAR(64) REFERENCES educators(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    tag VARCHAR(64)
+);
+
+CREATE INDEX IF NOT EXISTS idx_portfolios_edu ON portfolios(educator_id);
+
+-- ------------------------------------------------------------------------
+-- 9. EDUCATOR VERIFICATION MATRIX
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS verifications (
     id VARCHAR(64) PRIMARY KEY,
@@ -118,7 +163,7 @@ CREATE TABLE IF NOT EXISTS verifications (
 );
 
 -- ------------------------------------------------------------------------
--- 7. CUSTOM LEARNER SKILL REQUESTS
+-- 10. CUSTOM LEARNER SKILL REQUESTS
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS learner_requests (
     id VARCHAR(64) PRIMARY KEY,
@@ -143,7 +188,23 @@ CREATE TABLE IF NOT EXISTS learner_requests (
 CREATE INDEX IF NOT EXISTS idx_requests_status ON learner_requests(status);
 
 -- ------------------------------------------------------------------------
--- 8. BOOKINGS & APPRENTICESHIP SESSIONS
+-- 11. MATCHMAKING EVALUATIONS
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS matches (
+    id VARCHAR(64) PRIMARY KEY,
+    request_id VARCHAR(64) REFERENCES learner_requests(id) ON DELETE CASCADE,
+    educator_id VARCHAR(64) REFERENCES educators(id) ON DELETE CASCADE,
+    match_score INT NOT NULL,
+    match_reasons JSONB DEFAULT '[]',
+    matched_by VARCHAR(32) DEFAULT 'system',
+    status VARCHAR(32) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_matches_request ON matches(request_id);
+
+-- ------------------------------------------------------------------------
+-- 12. BOOKINGS & APPRENTICESHIP SESSIONS
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bookings (
     id VARCHAR(64) PRIMARY KEY,
@@ -172,7 +233,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_educator ON bookings(educator_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 
 -- ------------------------------------------------------------------------
--- 9. ESCROW PAYMENTS (MTN & Airtel MoMo)
+-- 13. ESCROW PAYMENTS (MTN & Airtel MoMo)
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payments (
     id VARCHAR(64) PRIMARY KEY,
@@ -192,7 +253,22 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
 
 -- ------------------------------------------------------------------------
--- 10. REVIEWS & RATINGS
+-- 14. FINANCIAL TRANSACTIONS & LEDGER
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS transactions (
+    id VARCHAR(64) PRIMARY KEY,
+    payment_id VARCHAR(64) REFERENCES payments(id) ON DELETE CASCADE,
+    type VARCHAR(32) NOT NULL CHECK (type IN ('learner_charge', 'platform_commission', 'educator_payout', 'refund')),
+    amount_ugx NUMERIC(12, 2) NOT NULL,
+    description TEXT,
+    status VARCHAR(32) DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_payment ON transactions(payment_id);
+
+-- ------------------------------------------------------------------------
+-- 15. REVIEWS & RATINGS
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reviews (
     id VARCHAR(64) PRIMARY KEY,
@@ -213,7 +289,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- ------------------------------------------------------------------------
--- 11. IN-APP MESSAGES & COMMUNICATIONS
+-- 16. IN-APP MESSAGES & COMMUNICATIONS
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS messages (
     id VARCHAR(64) PRIMARY KEY,
@@ -229,7 +305,23 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id
 CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
 
 -- ------------------------------------------------------------------------
--- 12. AUDIT LOGS & ADMINISTRATIVE GOVERNANCE
+-- 17. NOTIFICATIONS & ALERTS
+-- ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    link VARCHAR(255),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+
+-- ------------------------------------------------------------------------
+-- 18. AUDIT LOGS & ADMINISTRATIVE GOVERNANCE
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admin_actions (
     id VARCHAR(64) PRIMARY KEY,
@@ -243,7 +335,7 @@ CREATE TABLE IF NOT EXISTS admin_actions (
 );
 
 -- ------------------------------------------------------------------------
--- 13. NEWSLETTER SUBSCRIBERS
+-- 19. NEWSLETTER SUBSCRIBERS
 -- ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
     id BIGSERIAL PRIMARY KEY,
@@ -297,6 +389,18 @@ INSERT INTO categories (id, name, slug, description, icon_name, sort_order) VALU
 ('cat-ai', 'AI & Applied Technology', 'ai-technology', 'Practical AI tools for business, workflow automation, prompt engineering', 'Cpu', 20)
 ON CONFLICT (id) DO NOTHING;
 
+-- Initial Practical Skills Catalog
+INSERT INTO skills (id, category_id, name, slug, description, level_options, typical_duration_hours, popular) VALUES
+('skill-tailoring-1', 'cat-fashion', 'Garment Pattern Drafting & Cutting', 'pattern-drafting', 'Learn accurate manual pattern making for suits, dresses, and traditional attire.', '["beginner", "intermediate", "advanced"]', 20, TRUE),
+('skill-tailoring-2', 'cat-fashion', 'Industrial Sewing Machine Mastery', 'industrial-sewing', 'Operating and maintaining heavy-duty straight-stitch and overlock industrial machines.', '["beginner", "intermediate"]', 15, TRUE),
+('skill-web-1', 'cat-tech', 'Full-Stack Web Development (React & Node)', 'fullstack-web-dev', 'Modern responsive web development with React, TypeScript, APIs and databases.', '["beginner", "intermediate", "advanced"]', 35, TRUE),
+('skill-web-2', 'cat-tech', 'Python for Beginners & Automation', 'python-automation', 'Core Python fundamentals, scripting, data handling and daily task automation.', '["beginner", "intermediate"]', 20, FALSE),
+('skill-phone-1', 'cat-repair', 'Smartphone Hardware Diagnostics & Repair', 'smartphone-hardware-repair', 'Screen replacement, battery soldering, charging port repairs, and board schematics.', '["beginner", "intermediate", "advanced"]', 25, TRUE),
+('skill-baking-1', 'cat-culinary', 'Commercial Pastry & Cake Decorating', 'commercial-pastry-cake-decorating', 'Tiered wedding cakes, sharp fondant edges, Swiss meringue buttercream, and baking math.', '["beginner", "intermediate", "advanced"]', 18, TRUE),
+('skill-electrical-1', 'cat-electrical', 'Solar PV System Sizing & Installation', 'solar-pv-installation', 'Load calculation, hybrid inverter setup, lithium battery bank wiring, safety earthing.', '["beginner", "intermediate", "advanced"]', 24, TRUE),
+('skill-agri-2', 'cat-agriculture', 'Dairy Farming & Quality Milk Value Addition', 'dairy-farming-value-addition', 'Pasture management, breed selection, silage production, hygienic milk handling.', '["beginner", "intermediate"]', 20, TRUE)
+ON CONFLICT (id) DO NOTHING;
+
 -- Initial Platform Audit Record
 INSERT INTO admin_actions (id, admin_id, admin_name, action_type, target_entity, target_id, details)
 VALUES (
@@ -310,39 +414,38 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ========================================================================
--- ROW-LEVEL SECURITY (RLS) POLICIES (Defense-in-Depth)
+-- ROW-LEVEL SECURITY (RLS) POLICIES
 -- ========================================================================
 
--- Enable Row-Level Security on all core tables
+-- Enable Row-Level Security on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE educators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE learners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE educator_skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE qualifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE learner_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 
--- 1. Categories & Skills: Publicly readable by anyone
+-- Public Discovery Policies
 CREATE POLICY "Categories are viewable by everyone" ON categories FOR SELECT USING (true);
 CREATE POLICY "Skills are viewable by everyone" ON skills FOR SELECT USING (true);
-
--- 2. Active Educators: Publicly readable by anyone in discovery
 CREATE POLICY "Active educators viewable by everyone" ON educators FOR SELECT USING (status IN ('active', 'approved'));
-
--- 3. Reviews: Moderated reviews publicly viewable
+CREATE POLICY "Educator skills viewable by everyone" ON educator_skills FOR SELECT USING (true);
+CREATE POLICY "Qualifications viewable by everyone" ON qualifications FOR SELECT USING (true);
+CREATE POLICY "Portfolios viewable by everyone" ON portfolios FOR SELECT USING (true);
 CREATE POLICY "Moderated reviews viewable by everyone" ON reviews FOR SELECT USING (is_moderated = true);
 
--- 4. Newsletter Subscriptions: Anyone can subscribe
+-- Newsletter Subscriptions Policy
 CREATE POLICY "Anyone can subscribe to newsletter" ON newsletter_subscribers FOR INSERT WITH CHECK (true);
-
--- 5. Service Role / Backend Bypass (Full privileges for backend API service role)
--- Note: When your isolated Node.js backend connects using connection pooling or service keys,
--- it operates with full data orchestration privileges.
-
