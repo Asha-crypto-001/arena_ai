@@ -63,6 +63,60 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   });
 });
 
+app.post('/api/auth/google', (req: Request, res: Response) => {
+  const { email, name, avatar_url, role } = req.body;
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Email and name are required for Google authentication' });
+  }
+
+  const trimmedEmail = String(email).trim().toLowerCase();
+  let user = db.findUserByEmail(trimmedEmail);
+
+  if (!user) {
+    const userId = `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    user = {
+      id: userId,
+      email: trimmedEmail,
+      password_hash: `google_oauth_${Date.now()}`,
+      role: (role as any) || 'learner',
+      name: String(name).trim(),
+      phone: '+256 744 024 529',
+      avatar_url: avatar_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80`,
+      location: 'Mbarara City, Uganda',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    db.createUser(user);
+
+    if (user.role === 'learner') {
+      db.createLearner({
+        id: `lrn-${Date.now()}`,
+        user_id: userId,
+        location: 'Mbarara, Uganda',
+        bio: 'Practical skills student (Signed in with Google).',
+        learning_interests: [],
+        preferred_format: 'in-person',
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+
+  let learnerProfile = null;
+  let educatorProfile = null;
+  if (user.role === 'learner') {
+    learnerProfile = db.findLearnerByUserId(user.id);
+  } else if (user.role === 'educator') {
+    educatorProfile = db.findEducatorByUserId(user.id);
+  }
+
+  res.json({
+    user: sanitizeUser(user),
+    learnerProfile,
+    educatorProfile,
+    token: `token-${user.id}-${Date.now()}`
+  });
+});
+
 app.post('/api/auth/register', (req: Request, res: Response) => {
   const { email, password, name, phone, role, location, bio, learning_interests, preferred_format } = req.body;
 

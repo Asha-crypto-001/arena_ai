@@ -10,6 +10,7 @@ interface AuthContextType {
   notifications: Notification[];
   unreadNotificationCount: number;
   login: (email: string, password: string) => Promise<User>;
+  loginWithGoogle: (data: { email: string; name: string; avatar_url?: string; role?: string }) => Promise<User>;
   register: (data: any) => Promise<User>;
   updateAvatar: (avatarUrl: string) => Promise<User>;
   updateProfile: (updates: Partial<User>) => Promise<User>;
@@ -73,6 +74,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setEducatorProfile(data.educatorProfile);
       localStorage.setItem('iskilllink_user_id', data.user.id);
       
+      const notifs = await api.getNotifications(data.user.id);
+      setNotifications(notifs);
+      return data.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (googleData: { email: string; name: string; avatar_url?: string; role?: string }): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const data = await api.loginWithGoogle(googleData);
+      setUser(data.user);
+      setLearnerProfile(data.learnerProfile);
+      setEducatorProfile(data.educatorProfile);
+      localStorage.setItem('iskilllink_user_id', data.user.id);
+
       const notifs = await api.getNotifications(data.user.id);
       setNotifications(notifs);
       return data.user;
@@ -169,6 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         notifications,
         unreadNotificationCount,
         login,
+        loginWithGoogle,
         register,
         updateAvatar,
         updateProfile,

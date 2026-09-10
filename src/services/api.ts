@@ -132,6 +132,61 @@ export const api = {
     return { user, learnerProfile, educatorProfile, token };
   },
 
+  async loginWithGoogle(data: { email: string; name: string; avatar_url?: string; role?: string }) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await handleResponse<any>(res);
+    } catch {
+      // Offline fallback
+    }
+
+    const users = getLocalStorageData<any[]>('users', initialLocalUsers);
+    const normalizedEmail = data.email.trim().toLowerCase();
+    let user = users.find(u => u.email.toLowerCase() === normalizedEmail);
+
+    if (!user) {
+      user = {
+        id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        email: normalizedEmail,
+        password_hash: `google_oauth_${Date.now()}`,
+        role: (data.role as any) || 'learner',
+        name: data.name,
+        phone: '+256 744 024 529',
+        avatar_url: data.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        location: 'Mbarara City, Uganda',
+        created_at: new Date().toISOString()
+      };
+      users.push(user);
+      setLocalStorageData('users', users);
+
+      if (user.role === 'learner') {
+        const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
+        learners.push({
+          id: `lrn-${Date.now()}`,
+          user_id: user.id,
+          location: user.location,
+          bio: 'Practical skills student (Signed in with Google).',
+          learning_interests: [],
+          preferred_format: 'in-person',
+          created_at: new Date().toISOString()
+        });
+        setLocalStorageData('learners', learners);
+      }
+    }
+
+    const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
+    const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
+    const learnerProfile = learners.find(l => l.user_id === user!.id) || null;
+    const educatorProfile = educators.find(e => e.user_id === user!.id) || null;
+    const token = `token-${user.id}-${Date.now()}`;
+
+    return { user, learnerProfile, educatorProfile, token };
+  },
+
   async register(data: any) {
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
