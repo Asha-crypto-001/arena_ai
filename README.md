@@ -10,6 +10,8 @@
 
 Unlike passive video courses, iSkillLink focuses on **direct 1-on-1 and small group practical mentorship**, workshop safety inspections, transparent rule-based matching, and **Mobile Money Escrow (MTN MoMo & Airtel Money)** that protects both learners and educators.
 
+For the active architecture and engineering roadmap, consult the [Platform Improvement Tracker](IMPROVEMENTS.md).
+
 ---
 
 ## 🚀 Key Features
