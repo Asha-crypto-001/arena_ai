@@ -66,36 +66,7 @@ For security, credentials are managed securely via environment variables:
 
 ---
 
-## 🌐 How to Run the Frontend in GitHub
 
-### Option 1: Automatic GitHub Pages Deployment (Included in this repo)
-This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that builds and hosts your frontend directly on GitHub:
-
-1. In your GitHub repository (`Asha-crypto-001/arena_ai`), go to **Settings** $\rightarrow$ **Pages** (in the left sidebar).
-2. Under **Build and deployment** $\rightarrow$ **Source**, select **GitHub Actions**.
-3. Whenever you push to `main`, GitHub will automatically build and publish your frontend at:
-   ```
-   https://Asha-crypto-001.github.io/arena_ai/
-   ```
-
----
-
-### Option 2: 1-Click Free Deployment on Vercel / Netlify / Render (Recommended for Full-Stack)
-To run both the React frontend and the Express backend live with a public URL:
-
-#### Deploying on Vercel:
-1. Go to **[vercel.com](https://vercel.com)** and sign in with your GitHub account (`Asha-crypto-001`).
-2. Click **Add New Project** $\rightarrow$ Import **`arena_ai`**.
-3. Click **Deploy**. Vercel will automatically build and give you a live production URL (e.g. `https://iskilllink.vercel.app`).
-
-#### Deploying on Render (Frontend + Backend):
-1. Go to **[render.com](https://render.com)** and sign in with GitHub.
-2. Create a **Web Service**, select `Asha-crypto-001/arena_ai`.
-3. Set Build Command: `npm install && npm run build`
-4. Set Start Command: `npm run server`
-5. Click **Deploy**.
-
----
 
 ## 💻 Running Locally on Your Computer
 
