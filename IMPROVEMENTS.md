@@ -10,7 +10,7 @@
 
 | Iteration | Title | Focus Area | Status |
 | :--- | :--- | :--- | :--- |
-| **Iteration 1** | Security Hardening & Session Integrity | Auth, Password Hashing, JWT, Server Authorization | 🟡 Planned |
+| **Iteration 1** | Security Hardening & Session Integrity | Auth, Password Hashing, JWT, Server Authorization | 🟢 Completed |
 | **Iteration 2** | URL Routing & Navigation Architecture | Declarative Routes, Deep Linking, History Management | 🟡 Planned |
 | **Iteration 3** | Mobile Experience & Responsive Layouts | Viewport Overflows, Touch Drawers, Responsive Cards | 🟡 Planned |
 | **Iteration 4** | Form Usability & Input Validation | Step Validation, Search Debounce, Date Constraints | 🟡 Planned |
@@ -24,22 +24,22 @@
 ### Iteration 1: Security Hardening & Session Integrity
 *Eliminate credential vulnerabilities, secure communications, and establish robust authorization guards across all API routes.*
 
-- [ ] **1.1 Cryptographic Password Hashing**
+- [x] **1.1 Cryptographic Password Hashing**
   - Replace plaintext password comparisons with industry-standard hashing (`bcryptjs` or `argon2`) on user registration and onboarding.
   - Automatically hash existing seed data passwords on database initialization.
   - Ensure raw passwords and password hashes are stripped from all API responses via sanitization helpers.
 
-- [ ] **1.2 Stateless Session & JWT Infrastructure**
+- [x] **1.2 Stateless Session & JWT Infrastructure**
   - Implement signed JSON Web Tokens (JWT) issued upon successful authentication.
   - Attach tokens to authenticated requests via `Authorization: Bearer <token>` headers or secure HTTP-only cookies.
   - Validate token signatures and extract claims in an Express authentication middleware.
 
-- [ ] **1.3 Role-Based Access Control (RBAC) Enforcement**
+- [x] **1.3 Role-Based Access Control (RBAC) Enforcement**
   - Implement route guard middleware (`requireRole('admin')`, `requireEducator()`, etc.).
   - Protect verification step mutations, escrow payout releases, and secondary admin assignments so only verified lead or secondary admins can trigger them.
   - Validate that learners and educators can only read and mutate their own bookings, profiles, and payouts.
 
-- [ ] **1.4 Server Security Middleware**
+- [x] **1.4 Server Security Middleware**
   - Integrate `helmet` to set robust HTTP response headers (Content Security Policy, X-Frame-Options, HSTS).
   - Add `express-rate-limit` on `/api/auth/*` and payment endpoints to guard against brute-force attacks.
   - Configure strict CORS origin whitelisting matching production hostnames.

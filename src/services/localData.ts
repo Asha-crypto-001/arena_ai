@@ -42,7 +42,7 @@ export const initialLocalUsers: Array<User & { password_hash: string }> = [
   {
     id: 'usr-admin-ashabahebwa',
     email: 'ashabahebwahassan665@gmail.com',
-    password_hash: 'Ash@0001$',
+    password_hash: '$2b$10$NErcEsd5s0.RVb6cJ8kEXecftFIs9q/scddJaJUupEeDzD/YbMOxm',
     role: 'admin',
     name: 'Ashabahebwa Hassan',
     phone: '+256 744 024 529',

@@ -1,5 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { db } from './db.js';
 import { computeMatchesForRequest } from './matching.js';
 import {
@@ -7,19 +9,77 @@ import {
   Portfolio, Verification, LearnerRequest, Booking, Payment,
   Review, Message, Notification
 } from './types.js';
+import {
+  hashPassword,
+  hashPasswordSync,
+  comparePassword,
+  generateToken,
+  sanitizeUser
+} from './utils/security.js';
+import {
+  authenticateToken,
+  optionalToken,
+  requireRole,
+  requirePrimaryAdmin,
+  requireSelfOrAdmin
+} from './middleware/auth.js';
 
 const app = express();
 const PORT: number = Number(process.env.PORT) || 3001;
 
-app.use(cors());
-app.use(express.json());
+// HTTP Security Headers via Helmet
+app.use(helmet({
+  contentSecurityPolicy: false, // Prevent breaking local dev asset serving
+  crossOriginEmbedderPolicy: false
+}));
 
-// Helper to sanitize sensitive credentials before sending to client
-function sanitizeUser(user: any) {
-  if (!user) return null;
-  const { password_hash, ...safeUser } = user;
-  return safeUser;
-}
+// CORS Configuration
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim())
+  : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Permissive in development, logged
+    }
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '10mb' }));
+
+// Brute-force Rate Limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: { error: 'Too many payment requests. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/google', authLimiter);
+app.use('/api/payments/simulate-payment', paymentLimiter);
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -31,7 +91,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // AUTHENTICATION & ACCESS CONTROL
 // ==========================================
 
-app.post('/api/auth/login', (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
@@ -42,7 +102,8 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Account not found with this email. Please register.' });
   }
 
-  if (user.password_hash !== password) {
+  const isPasswordValid = await comparePassword(password, user.password_hash);
+  if (!isPasswordValid) {
     return res.status(401).json({ error: 'Incorrect password. Please try again.' });
   }
 
@@ -55,11 +116,13 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     educatorProfile = db.findEducatorByUserId(user.id);
   }
 
+  const token = generateToken(user);
+
   res.json({
     user: sanitizeUser(user),
     learnerProfile,
     educatorProfile,
-    token: `token-${user.id}-${Date.now()}`
+    token
   });
 });
 
@@ -77,7 +140,7 @@ app.post('/api/auth/google', (req: Request, res: Response) => {
     user = {
       id: userId,
       email: trimmedEmail,
-      password_hash: `google_oauth_${Date.now()}`,
+      password_hash: hashPasswordSync(`google_oauth_${Date.now()}`),
       role: (role as any) || 'learner',
       name: String(name).trim(),
       phone: '+256 744 024 529',
@@ -109,19 +172,25 @@ app.post('/api/auth/google', (req: Request, res: Response) => {
     educatorProfile = db.findEducatorByUserId(user.id);
   }
 
+  const token = generateToken(user);
+
   res.json({
     user: sanitizeUser(user),
     learnerProfile,
     educatorProfile,
-    token: `token-${user.id}-${Date.now()}`
+    token
   });
 });
 
-app.post('/api/auth/register', (req: Request, res: Response) => {
+app.post('/api/auth/register', async (req: Request, res: Response) => {
   const { email, password, name, phone, role, location, bio, learning_interests, preferred_format } = req.body;
 
   if (!email || !password || !name || !role) {
     return res.status(400).json({ error: 'Email, password, full name, and role are required' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
   }
 
   const trimmedEmail = String(email).trim().toLowerCase();
@@ -130,11 +199,12 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'An account with this email already exists. Please log in.' });
   }
 
+  const hashedPassword = await hashPassword(password);
   const userId = `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const newUser: User = {
     id: userId,
     email: trimmedEmail,
-    password_hash: password,
+    password_hash: hashedPassword,
     role: role as 'learner' | 'educator' | 'admin',
     name: String(name).trim(),
     phone: phone || '+256 744 024 529',
@@ -206,26 +276,24 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     });
   }
 
+  const token = generateToken(newUser);
+
   res.status(201).json({
     user: sanitizeUser(newUser),
     learnerProfile,
     educatorProfile,
-    token: `token-${newUser.id}-${Date.now()}`
+    token
   });
 });
 
-app.get('/api/auth/me', (req: Request, res: Response) => {
-  const rawHeader = req.headers['x-user-id'];
-  const headerUserId = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-  const userId = typeof req.query.userId === 'string' ? req.query.userId : headerUserId;
-
-  if (!userId) {
-    return res.json({ user: null, learnerProfile: null, educatorProfile: null });
+app.get('/api/auth/me', authenticateToken, (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const user = db.findUserById(String(userId));
+  const user = db.findUserById(req.user.id);
   if (!user) {
-    return res.json({ user: null, learnerProfile: null, educatorProfile: null });
+    return res.status(404).json({ error: 'User account not found' });
   }
 
   let learnerProfile = null;
@@ -244,7 +312,7 @@ app.get('/api/auth/me', (req: Request, res: Response) => {
   });
 });
 
-app.patch('/api/users/:id/avatar', (req: Request, res: Response) => {
+app.patch('/api/users/:id/avatar', authenticateToken, requireSelfOrAdmin(req => String(req.params.id)), (req: Request, res: Response) => {
   const id = String(req.params.id);
   const { avatar_url } = req.body;
 
@@ -257,10 +325,10 @@ app.patch('/api/users/:id/avatar', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ user: updatedUser });
+  res.json({ user: sanitizeUser(updatedUser) });
 });
 
-app.patch('/api/users/:id', (req: Request, res: Response) => {
+app.patch('/api/users/:id', authenticateToken, requireSelfOrAdmin(req => String(req.params.id)), (req: Request, res: Response) => {
   const id = String(req.params.id);
   const { name, phone, avatar_url } = req.body;
 
@@ -274,7 +342,7 @@ app.patch('/api/users/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ user: updatedUser });
+  res.json({ user: sanitizeUser(updatedUser) });
 });
 
 // ==========================================
@@ -542,11 +610,19 @@ app.post('/api/educators/onboard', (req: Request, res: Response) => {
 });
 
 // Update Educator Profile
-app.patch('/api/educators/:id', (req: Request, res: Response) => {
-  const updated = db.updateEducator(String(req.params.id), req.body);
-  if (!updated) {
+app.patch('/api/educators/:id', authenticateToken, (req: Request, res: Response) => {
+  const educator = db.findEducatorById(String(req.params.id));
+  if (!educator) {
     return res.status(404).json({ error: 'Educator not found' });
   }
+
+  const isAdmin = req.user?.role === 'admin' || req.user?.role === 'secondary_admin';
+  const isOwner = req.user?.id === educator.user_id;
+  if (!isAdmin && !isOwner) {
+    return res.status(403).json({ error: 'Access denied. You can only update your own educator profile.' });
+  }
+
+  const updated = db.updateEducator(String(req.params.id), req.body);
   res.json(db.findEducatorById(String(req.params.id)));
 });
 
@@ -554,7 +630,7 @@ app.patch('/api/educators/:id', (req: Request, res: Response) => {
 // LEARNER REQUESTS & MATCHING
 // ==========================================
 
-app.get('/api/learner-requests', (req: Request, res: Response) => {
+app.get('/api/learner-requests', optionalToken, (req: Request, res: Response) => {
   const learner_id = typeof req.query.learner_id === 'string' ? req.query.learner_id : undefined;
   const status = typeof req.query.status === 'string' ? req.query.status : undefined;
 
@@ -570,7 +646,7 @@ app.get('/api/learner-requests', (req: Request, res: Response) => {
   res.json(requests);
 });
 
-app.post('/api/learner-requests', (req: Request, res: Response) => {
+app.post('/api/learner-requests', authenticateToken, requireRole('learner', 'admin'), (req: Request, res: Response) => {
   const {
     learner_id, skill_id, skill_name, skill_level, learning_goal,
     format_preference, location, preferred_schedule, frequency,
@@ -581,10 +657,14 @@ app.post('/api/learner-requests', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Skill name, learning goal, and budget are required' });
   }
 
+  const effectiveLearnerId = learner_id || `lrn-${req.user!.id}`;
+  const effectiveName = learner_name || req.user!.name;
+  const effectiveEmail = learner_email || req.user!.email;
+
   const requestId = `req-${Date.now()}`;
   const newRequest: LearnerRequest = {
     id: requestId,
-    learner_id: learner_id || 'lrn-1',
+    learner_id: effectiveLearnerId,
     skill_id,
     skill_name,
     skill_level: skill_level || 'beginner',
@@ -597,8 +677,8 @@ app.post('/api/learner-requests', (req: Request, res: Response) => {
     additional_notes: additional_notes || '',
     status: 'open',
     contact_phone: contact_phone || '+256 744 024 529',
-    learner_name: learner_name || 'Learner',
-    learner_email: learner_email || 'learner@iskilllink.ug',
+    learner_name: effectiveName,
+    learner_email: effectiveEmail,
     created_at: new Date().toISOString()
   };
 
@@ -653,8 +733,8 @@ app.get('/api/learner-requests/:id/matches', (req: Request, res: Response) => {
   });
 });
 
-app.post('/api/learner-requests/:id/assign-match', (req: Request, res: Response) => {
-  const { educator_id, admin_id, admin_name } = req.body;
+app.post('/api/learner-requests/:id/assign-match', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
+  const { educator_id } = req.body;
   const request = db.getLearnerRequests().find(r => r.id === String(req.params.id));
   if (!request) {
     return res.status(404).json({ error: 'Request not found' });
@@ -665,13 +745,16 @@ app.post('/api/learner-requests/:id/assign-match', (req: Request, res: Response)
     return res.status(404).json({ error: 'Educator not found' });
   }
 
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+
   const newMatch = db.createMatch({
     id: `match-${Date.now()}`,
     request_id: request.id,
     educator_id: educator.id,
     match_score: 95,
     match_reasons: [
-      `Manually assigned by Administrator (${admin_name || 'Ashabahebwa Hassan'})`,
+      `Manually assigned by Administrator (${adminName})`,
       `Verified expertise in ${request.skill_name}`,
       `Compatible service location in ${educator.location}`
     ],
@@ -683,8 +766,8 @@ app.post('/api/learner-requests/:id/assign-match', (req: Request, res: Response)
   db.updateLearnerRequest(request.id, { status: 'matched' });
 
   db.logAdminAction({
-    admin_id: admin_id || 'usr-admin-ashabahebwa',
-    admin_name: admin_name || 'Ashabahebwa Hassan',
+    admin_id: adminId,
+    admin_name: adminName,
     action_type: 'ASSIGN_EDUCATOR_MATCH',
     target_entity: 'LearnerRequest',
     target_id: request.id,
@@ -710,7 +793,7 @@ app.post('/api/learner-requests/:id/assign-match', (req: Request, res: Response)
 // BOOKINGS & SESSIONS
 // ==========================================
 
-app.get('/api/bookings', (req: Request, res: Response) => {
+app.get('/api/bookings', optionalToken, (req: Request, res: Response) => {
   const learner_id = typeof req.query.learner_id === 'string' ? req.query.learner_id : undefined;
   const educator_id = typeof req.query.educator_id === 'string' ? req.query.educator_id : undefined;
   const status = typeof req.query.status === 'string' ? req.query.status : undefined;
@@ -739,7 +822,7 @@ app.get('/api/bookings', (req: Request, res: Response) => {
       ...b,
       educator,
       learner,
-      learnerUser,
+      learnerUser: sanitizeUser(learnerUser),
       payment,
       review
     };
@@ -748,17 +831,18 @@ app.get('/api/bookings', (req: Request, res: Response) => {
   res.json(enriched);
 });
 
-app.post('/api/bookings', (req: Request, res: Response) => {
+app.post('/api/bookings', authenticateToken, requireRole('learner', 'admin'), (req: Request, res: Response) => {
   const {
     learner_id, educator_id, skill_id, skill_name, format,
     location_or_link, scheduled_date, start_time, duration_hours,
     total_amount_ugx, notes
   } = req.body;
 
-  if (!learner_id || !educator_id || !scheduled_date || !total_amount_ugx) {
+  if (!educator_id || !scheduled_date || !total_amount_ugx) {
     return res.status(400).json({ error: 'Missing required booking parameters' });
   }
 
+  const effectiveLearnerId = learner_id || `lrn-${req.user!.id}`;
   const total = Number(total_amount_ugx);
   const platformFee = Math.round(total * 0.10); // 10% platform commission
   const educatorPayout = total - platformFee;
@@ -766,7 +850,7 @@ app.post('/api/bookings', (req: Request, res: Response) => {
   const bookingId = `bk-${Date.now()}`;
   const newBooking: Booking = {
     id: bookingId,
-    learner_id,
+    learner_id: effectiveLearnerId,
     educator_id,
     skill_id,
     skill_name: skill_name || 'Practical Skill Session',
@@ -791,7 +875,7 @@ app.post('/api/bookings', (req: Request, res: Response) => {
   db.createPayment({
     id: paymentId,
     booking_id: bookingId,
-    learner_id,
+    learner_id: effectiveLearnerId,
     educator_id,
     amount_ugx: total,
     platform_fee_ugx: platformFee,
@@ -821,7 +905,7 @@ app.post('/api/bookings', (req: Request, res: Response) => {
   res.status(201).json({ success: true, booking: newBooking });
 });
 
-app.patch('/api/bookings/:id/status', (req: Request, res: Response) => {
+app.patch('/api/bookings/:id/status', authenticateToken, requireRole('educator', 'admin'), (req: Request, res: Response) => {
   const { status, cancellation_reason } = req.body;
   const booking = db.getBookings().find(b => b.id === String(req.params.id));
 
@@ -845,7 +929,7 @@ app.patch('/api/bookings/:id/status', (req: Request, res: Response) => {
   res.json(updated);
 });
 
-app.patch('/api/bookings/:id/progress', (req: Request, res: Response) => {
+app.patch('/api/bookings/:id/progress', authenticateToken, requireRole('educator', 'admin'), (req: Request, res: Response) => {
   const { milestone_progress } = req.body;
   const updated = db.updateBooking(String(req.params.id), {
     milestone_progress: Math.min(100, Math.max(0, Number(milestone_progress)))
@@ -860,7 +944,7 @@ app.patch('/api/bookings/:id/progress', (req: Request, res: Response) => {
 // PAYMENTS & ESCROW
 // ==========================================
 
-app.get('/api/payments', (req: Request, res: Response) => {
+app.get('/api/payments', optionalToken, (req: Request, res: Response) => {
   const learner_id = typeof req.query.learner_id === 'string' ? req.query.learner_id : undefined;
   const educator_id = typeof req.query.educator_id === 'string' ? req.query.educator_id : undefined;
   const status = typeof req.query.status === 'string' ? req.query.status : undefined;
@@ -934,8 +1018,7 @@ app.post('/api/payments/simulate-payment', (req: Request, res: Response) => {
 });
 
 // Admin Release Payout to Educator
-app.patch('/api/payments/:id/release-payout', (req: Request, res: Response) => {
-  const { admin_id, admin_name } = req.body;
+app.patch('/api/payments/:id/release-payout', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const payment = db.getPayments().find(p => p.id === String(req.params.id));
 
   if (!payment) {
@@ -966,9 +1049,12 @@ app.patch('/api/payments/:id/release-payout', (req: Request, res: Response) => {
     created_at: new Date().toISOString()
   });
 
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
+
   db.logAdminAction({
-    admin_id: admin_id || 'usr-admin-ashabahebwa',
-    admin_name: admin_name || 'Ashabahebwa Hassan',
+    admin_id: adminId,
+    admin_name: adminName,
     action_type: 'RELEASE_EDUCATOR_PAYOUT',
     target_entity: 'Payment',
     target_id: payment.id,
@@ -993,7 +1079,7 @@ app.get('/api/reviews', (req: Request, res: Response) => {
   res.json(reviews);
 });
 
-app.post('/api/reviews', (req: Request, res: Response) => {
+app.post('/api/reviews', authenticateToken, requireRole('learner', 'admin'), (req: Request, res: Response) => {
   const {
     booking_id, educator_id, learner_id, learner_name, learner_avatar,
     rating, skill_rating, punctuality_rating, communication_rating, comment
@@ -1003,12 +1089,15 @@ app.post('/api/reviews', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Educator, rating, and review comment are required' });
   }
 
+  const effectiveLearnerId = learner_id || `lrn-${req.user!.id}`;
+  const effectiveName = learner_name || req.user!.name;
+
   const newReview: Review = {
     id: `rev-${Date.now()}`,
     booking_id: booking_id || `bk-${Date.now()}`,
     educator_id,
-    learner_id: learner_id || 'lrn-1',
-    learner_name: learner_name || 'Verified Learner',
+    learner_id: effectiveLearnerId,
+    learner_name: effectiveName,
     learner_avatar: learner_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
     rating: Number(rating),
     skill_rating: Number(skill_rating) || Number(rating),
@@ -1040,7 +1129,7 @@ app.post('/api/reviews', (req: Request, res: Response) => {
   res.status(201).json({ success: true, review: newReview });
 });
 
-app.post('/api/reviews/:id/reply', (req: Request, res: Response) => {
+app.post('/api/reviews/:id/reply', authenticateToken, requireRole('educator', 'admin'), (req: Request, res: Response) => {
   const { reply } = req.body;
   if (!reply) {
     return res.status(400).json({ error: 'Reply text required' });
@@ -1058,12 +1147,18 @@ app.post('/api/reviews/:id/reply', (req: Request, res: Response) => {
 // IN-APP MESSAGES & NOTIFICATIONS
 // ==========================================
 
-app.get('/api/messages', (req: Request, res: Response) => {
+app.get('/api/messages', authenticateToken, (req: Request, res: Response) => {
   const user_id = typeof req.query.user_id === 'string' ? req.query.user_id : undefined;
   const conversation_id = typeof req.query.conversation_id === 'string' ? req.query.conversation_id : undefined;
   let messages = db.getMessages();
 
-  if (conversation_id) {
+  // Role-scoped message security: non-admins can only see conversations they participate in
+  const currentUserId = req.user!.id;
+  const isAdmin = req.user!.role === 'admin' || req.user!.role === 'secondary_admin';
+
+  if (!isAdmin) {
+    messages = messages.filter(m => m.sender_id === currentUserId || m.receiver_id === currentUserId);
+  } else if (conversation_id) {
     messages = messages.filter(m => m.conversation_id === conversation_id);
   } else if (user_id) {
     messages = messages.filter(m => m.sender_id === user_id || m.receiver_id === user_id);
@@ -1072,12 +1167,14 @@ app.get('/api/messages', (req: Request, res: Response) => {
   res.json(messages);
 });
 
-app.post('/api/messages', (req: Request, res: Response) => {
-  const { conversation_id, sender_id, receiver_id, content } = req.body;
-  if (!sender_id || !receiver_id || !content) {
-    return res.status(400).json({ error: 'Sender, receiver, and content are required' });
+app.post('/api/messages', authenticateToken, (req: Request, res: Response) => {
+  const { conversation_id, receiver_id, content } = req.body;
+  if (!receiver_id || !content) {
+    return res.status(400).json({ error: 'Receiver and content are required' });
   }
 
+  // Sender is guaranteed to be the authenticated user
+  const sender_id = req.user!.id;
   const msgId = `msg-${Date.now()}`;
   const convId = conversation_id || `conv-${[sender_id, receiver_id].sort().join('-')}`;
 
@@ -1109,18 +1206,18 @@ app.post('/api/messages', (req: Request, res: Response) => {
   res.status(201).json(newMsg);
 });
 
-app.get('/api/notifications', (req: Request, res: Response) => {
-  const user_id = typeof req.query.user_id === 'string' ? req.query.user_id : undefined;
+app.get('/api/notifications', authenticateToken, (req: Request, res: Response) => {
   let notifications = db.getNotifications();
+  // Strictly scope notifications to authenticated user unless super admin passes query
+  const targetUserId = (req.user!.role === 'admin' && typeof req.query.user_id === 'string')
+    ? req.query.user_id
+    : req.user!.id;
 
-  if (user_id) {
-    notifications = notifications.filter(n => n.user_id === user_id);
-  }
-
+  notifications = notifications.filter(n => n.user_id === targetUserId);
   res.json(notifications);
 });
 
-app.patch('/api/notifications/:id/read', (req: Request, res: Response) => {
+app.patch('/api/notifications/:id/read', authenticateToken, (req: Request, res: Response) => {
   db.markNotificationRead(String(req.params.id));
   res.json({ success: true });
 });
@@ -1129,8 +1226,7 @@ app.patch('/api/notifications/:id/read', (req: Request, res: Response) => {
 // ADMIN OPERATIONS & AUDIT LOGS
 // ==========================================
 
-app.get('/api/admin/metrics', (req: Request, res: Response) => {
-  const users = db.getUsers();
+app.get('/api/admin/metrics', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const learners = db.getLearners();
   const educators = db.getEducators();
   const bookings = db.getBookings();
@@ -1163,22 +1259,25 @@ app.get('/api/admin/metrics', (req: Request, res: Response) => {
   });
 });
 
-app.get('/api/admin/verification-queue', (req: Request, res: Response) => {
+app.get('/api/admin/verification-queue', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const educators = db.getEducators().map(e => db.findEducatorById(e.id)!);
   const queue = educators.filter(e => e.status === 'applied' || e.status === 'under_review' || e.status === 'verification');
   res.json(queue);
 });
 
-app.patch('/api/admin/verification-step', (req: Request, res: Response) => {
-  const { educator_id, step, status, notes, admin_id, admin_name } = req.body;
+app.patch('/api/admin/verification-step', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
+  const { educator_id, step, status, notes } = req.body;
   const verification = db.getVerifications().find(v => v.educator_id === educator_id);
 
   if (!verification) {
     return res.status(404).json({ error: 'Verification record not found' });
   }
 
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
+
   const updates: Partial<Verification> = {
-    verified_by_admin_id: admin_id || 'usr-admin-ashabahebwa',
+    verified_by_admin_id: adminId,
     notes: notes || verification.notes
   };
 
@@ -1202,8 +1301,8 @@ app.patch('/api/admin/verification-step', (req: Request, res: Response) => {
   }
 
   db.logAdminAction({
-    admin_id: admin_id || 'usr-admin-ashabahebwa',
-    admin_name: admin_name || 'Ashabahebwa Hassan',
+    admin_id: adminId,
+    admin_name: adminName,
     action_type: 'UPDATE_VERIFICATION_STEP',
     target_entity: 'Verification',
     target_id: educator_id,
@@ -1213,13 +1312,16 @@ app.patch('/api/admin/verification-step', (req: Request, res: Response) => {
   res.json({ success: true, verification: db.getVerifications().find(v => v.educator_id === educator_id) });
 });
 
-app.patch('/api/admin/educator-status', (req: Request, res: Response) => {
-  const { educator_id, status, notes, admin_id, admin_name } = req.body;
+app.patch('/api/admin/educator-status', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
+  const { educator_id, status, notes } = req.body;
   const educator = db.findEducatorById(educator_id);
 
   if (!educator) {
     return res.status(404).json({ error: 'Educator not found' });
   }
+
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
 
   db.updateEducator(educator_id, {
     status,
@@ -1227,8 +1329,8 @@ app.patch('/api/admin/educator-status', (req: Request, res: Response) => {
   });
 
   db.logAdminAction({
-    admin_id: admin_id || 'usr-admin-ashabahebwa',
-    admin_name: admin_name || 'Ashabahebwa Hassan',
+    admin_id: adminId,
+    admin_name: adminName,
     action_type: 'UPDATE_EDUCATOR_STATUS',
     target_entity: 'Educator',
     target_id: educator_id,
@@ -1252,57 +1354,57 @@ app.patch('/api/admin/educator-status', (req: Request, res: Response) => {
   res.json({ success: true, educator: db.findEducatorById(educator_id) });
 });
 
-app.get('/api/admin/audit-logs', (req: Request, res: Response) => {
+app.get('/api/admin/audit-logs', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const logs = db.getAdminActions();
   res.json(logs);
 });
 
 // Admin User Directory & Role Assignment
-app.get('/api/admin/users', (req: Request, res: Response) => {
+app.get('/api/admin/users', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const users = db.getAllUsersDetailed().map(u => sanitizeUser(u));
   res.json(users);
 });
 
-app.post('/api/admin/users/:id/assign-secondary-admin', (req: Request, res: Response) => {
-  const { admin_id, admin_name } = req.body;
+app.post('/api/admin/users/:id/assign-secondary-admin', authenticateToken, requirePrimaryAdmin, (req: Request, res: Response) => {
   const userId = String(req.params.id);
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
 
   const updatedUser = db.assignSecondaryAdmin(
     userId,
-    admin_id || 'usr-admin-ashabahebwa',
-    admin_name || 'Ashabahebwa Hassan'
+    adminId,
+    adminName
   );
 
   if (!updatedUser) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ success: true, user: updatedUser });
+  res.json({ success: true, user: sanitizeUser(updatedUser) });
 });
 
-app.post('/api/admin/users/:id/revoke-secondary-admin', (req: Request, res: Response) => {
-  const { admin_id, admin_name } = req.body;
+app.post('/api/admin/users/:id/revoke-secondary-admin', authenticateToken, requirePrimaryAdmin, (req: Request, res: Response) => {
   const userId = String(req.params.id);
+  const adminId = req.user?.id || 'usr-admin-ashabahebwa';
+  const adminName = req.user?.name || 'Ashabahebwa Hassan';
 
   const updatedUser = db.revokeSecondaryAdmin(
     userId,
-    admin_id || 'usr-admin-ashabahebwa',
-    admin_name || 'Ashabahebwa Hassan'
+    adminId,
+    adminName
   );
 
   if (!updatedUser) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ success: true, user: updatedUser });
+  res.json({ success: true, user: sanitizeUser(updatedUser) });
 });
 
 // Admin Learner & Educator Demand / Interests Intelligence
-app.get('/api/admin/interests-demand', (req: Request, res: Response) => {
+app.get('/api/admin/interests-demand', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
   const requests = db.getLearnerRequests();
   const learners = db.getLearners();
-  const educators = db.getEducators();
-  const categories = db.getCategories();
 
   // Aggregate skill demand counts
   const demandByTrade: { [trade: string]: { count: number; totalBudget: number; locations: Set<string> } } = {};
@@ -1341,8 +1443,8 @@ app.get('/api/admin/interests-demand', (req: Request, res: Response) => {
   });
 });
 
-// Reset Database if needed
-app.post('/api/system/reset', (req: Request, res: Response) => {
+// Reset Database - Restricted strictly to Primary Administrator
+app.post('/api/system/reset', authenticateToken, requirePrimaryAdmin, (req: Request, res: Response) => {
   const state = db.resetToDefault();
   res.json({ success: true, message: 'Database reset to default data' });
 });

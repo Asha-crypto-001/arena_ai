@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import {
   User, Educator, Category, Skill, LearnerRequest,
   Booking, Payment, Review, Message, Notification,
@@ -15,6 +16,31 @@ import {
 } from './localData';
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string) || '/api';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('iskilllink_token');
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('iskilllink_token', token);
+}
+
+export function clearAuthSession(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('iskilllink_token');
+  localStorage.removeItem('iskilllink_user_id');
+}
+
+export function getAuthHeaders(headers: Record<string, string> = {}): Record<string, string> {
+  const token = getAuthToken();
+  const res: Record<string, string> = { ...headers };
+  if (token) {
+    res['Authorization'] = `Bearer ${token}`;
+  }
+  return res;
+}
 
 // Helper to initialize local persistent storage for static environments (e.g. GitHub Pages)
 function getLocalStorageData<T>(key: string, defaultValue: T): T {
@@ -55,7 +81,7 @@ if (typeof window !== 'undefined') {
       );
       const admin = filteredUsers.find(u => u.email === 'ashabahebwahassan665@gmail.com' || u.role === 'admin');
       if (admin) {
-        admin.password_hash = 'Ash@0001$';
+        admin.password_hash = '$2b$10$NErcEsd5s0.RVb6cJ8kEXecftFIs9q/scddJaJUupEeDzD/YbMOxm';
         admin.role = 'admin';
         admin.name = 'Ashabahebwa Hassan';
       }
@@ -104,9 +130,13 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      if (res.ok) return await handleResponse<any>(res);
+      if (res.ok) {
+        const data = await handleResponse<any>(res);
+        if (data.token) setAuthToken(data.token);
+        return data;
+      }
     } catch {
-      // Offline / GitHub Pages fallback below
+      // Offline / fallback below
     }
 
     // Client-side fallback authentication
@@ -118,8 +148,13 @@ export const api = {
       throw new Error('Account not found with this email address.');
     }
 
-    if (password && user.password_hash !== password) {
-      throw new Error('Incorrect password. Please try again.');
+    if (password) {
+      const isMatch = user.password_hash?.startsWith('$2')
+        ? await bcrypt.compare(password, user.password_hash)
+        : user.password_hash === password;
+      if (!isMatch) {
+        throw new Error('Incorrect password. Please try again.');
+      }
     }
 
     const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
@@ -127,9 +162,13 @@ export const api = {
 
     const learnerProfile = learners.find(l => l.user_id === user.id) || null;
     const educatorProfile = educators.find(e => e.user_id === user.id) || null;
-    const token = `token-${user.id}-${Date.now()}`;
+    const token = `local-token-${user.id}-${Date.now()}`;
+    setAuthToken(token);
 
-    return { user, learnerProfile, educatorProfile, token };
+    const safeUser = { ...user };
+    delete safeUser.password_hash;
+
+    return { user: safeUser, learnerProfile, educatorProfile, token };
   },
 
   async loginWithGoogle(data: { email: string; name: string; avatar_url?: string; role?: string }) {
@@ -139,7 +178,11 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await handleResponse<any>(res);
+      if (res.ok) {
+        const result = await handleResponse<any>(res);
+        if (result.token) setAuthToken(result.token);
+        return result;
+      }
     } catch {
       // Offline fallback
     }
@@ -152,7 +195,7 @@ export const api = {
       user = {
         id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         email: normalizedEmail,
-        password_hash: `google_oauth_${Date.now()}`,
+        password_hash: `$2b$10$googleoauth${Date.now()}`,
         role: (data.role as any) || 'learner',
         name: data.name,
         phone: '+256 744 024 529',
@@ -182,9 +225,13 @@ export const api = {
     const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
     const learnerProfile = learners.find(l => l.user_id === user!.id) || null;
     const educatorProfile = educators.find(e => e.user_id === user!.id) || null;
-    const token = `token-${user.id}-${Date.now()}`;
+    const token = `local-token-${user.id}-${Date.now()}`;
+    setAuthToken(token);
 
-    return { user, learnerProfile, educatorProfile, token };
+    const safeUser = { ...user };
+    delete safeUser.password_hash;
+
+    return { user: safeUser, learnerProfile, educatorProfile, token };
   },
 
   async register(data: any) {
@@ -194,7 +241,11 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (res.ok) return await handleResponse<any>(res);
+      if (res.ok) {
+        const result = await handleResponse<any>(res);
+        if (result.token) setAuthToken(result.token);
+        return result;
+      }
     } catch {
       // Offline fallback
     }
@@ -205,10 +256,11 @@ export const api = {
       throw new Error('An account with this email already exists.');
     }
 
+    const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : '$2b$10$unauthenticatedfallback';
     const newUser: any = {
       id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       email: data.email.trim().toLowerCase(),
-      password_hash: data.password,
+      password_hash: hashedPassword,
       role: data.role || 'learner',
       name: data.name,
       phone: data.phone || '+256 ',
@@ -261,21 +313,29 @@ export const api = {
       setLocalStorageData('educators', educators);
     }
 
-    const token = `token-${newUser.id}-${Date.now()}`;
-    return { user: newUser, learnerProfile, educatorProfile, token };
+    const token = `local-token-${newUser.id}-${Date.now()}`;
+    setAuthToken(token);
+
+    const safeUser = { ...newUser };
+    delete safeUser.password_hash;
+
+    return { user: safeUser, learnerProfile, educatorProfile, token };
   },
 
   async getMe(userId?: string) {
     try {
-      const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-      const res = await fetch(`${API_BASE}/auth/me${query}`);
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<any>(res);
     } catch {
       // Offline fallback
     }
 
+    if (!userId) return { user: null, learnerProfile: null, educatorProfile: null };
+
     const users = getLocalStorageData<any[]>('users', initialLocalUsers);
-    const user = users.find(u => u.id === userId) || users[0];
+    const user = users.find(u => u.id === userId);
     if (!user) return { user: null, learnerProfile: null, educatorProfile: null };
 
     const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
@@ -284,14 +344,17 @@ export const api = {
     const learnerProfile = learners.find(l => l.user_id === user.id) || null;
     const educatorProfile = educators.find(e => e.user_id === user.id) || null;
 
-    return { user, learnerProfile, educatorProfile };
+    const safeUser = { ...user };
+    delete safeUser.password_hash;
+
+    return { user: safeUser, learnerProfile, educatorProfile };
   },
 
   async updateUserAvatar(userId: string, avatarUrl: string) {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/avatar`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ avatar_url: avatarUrl })
       });
       if (res.ok) return await handleResponse<{ user: User }>(res);
@@ -321,7 +384,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(updates)
       });
       if (res.ok) return await handleResponse<{ user: User }>(res);
@@ -425,7 +488,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/educators/onboard`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -478,7 +541,9 @@ export const api = {
       const params = new URLSearchParams();
       if (filters.learner_id) params.append('learner_id', filters.learner_id);
       if (filters.status) params.append('status', filters.status);
-      const res = await fetch(`${API_BASE}/learner-requests?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/learner-requests?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<LearnerRequest[]>(res);
     } catch {}
     return getLocalStorageData<LearnerRequest[]>('learner_requests', []);
@@ -488,7 +553,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/learner-requests`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -538,7 +603,9 @@ export const api = {
       if (filters.learner_id) params.append('learner_id', filters.learner_id);
       if (filters.educator_id) params.append('educator_id', filters.educator_id);
       if (filters.status) params.append('status', filters.status);
-      const res = await fetch(`${API_BASE}/bookings?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/bookings?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<Booking[]>(res);
     } catch {}
     return getLocalStorageData<Booking[]>('bookings', initialLocalBookings);
@@ -548,7 +615,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/bookings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -584,7 +651,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/bookings/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status, cancellation_reason: reason })
       });
       if (res.ok) return await handleResponse<Booking>(res);
@@ -603,7 +670,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/bookings/${id}/progress`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ milestone_progress: progress })
       });
       if (res.ok) return await handleResponse<Booking>(res);
@@ -625,7 +692,9 @@ export const api = {
       if (filters.learner_id) params.append('learner_id', filters.learner_id);
       if (filters.educator_id) params.append('educator_id', filters.educator_id);
       if (filters.status) params.append('status', filters.status);
-      const res = await fetch(`${API_BASE}/payments?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/payments?${params.toString()}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<Payment[]>(res);
     } catch {}
     return getLocalStorageData<Payment[]>('payments', initialLocalPayments);
@@ -635,7 +704,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/payments/simulate-payment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ booking_id: bookingId, method, phone_number: phoneNumber })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -677,7 +746,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/payments/${paymentId}/release-payout`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ admin_name: adminName })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -696,7 +765,9 @@ export const api = {
   async getReviews(educatorId?: string) {
     try {
       const query = educatorId ? `?educator_id=${educatorId}` : '';
-      const res = await fetch(`${API_BASE}/reviews${query}`);
+      const res = await fetch(`${API_BASE}/reviews${query}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<Review[]>(res);
     } catch {}
     return [];
@@ -706,7 +777,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/reviews`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -734,7 +805,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/reviews/${reviewId}/reply`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ reply })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -745,7 +816,9 @@ export const api = {
   // Messages & Notifications
   async getMessages(userId: string) {
     try {
-      const res = await fetch(`${API_BASE}/messages?user_id=${userId}`);
+      const res = await fetch(`${API_BASE}/messages?user_id=${userId}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<Message[]>(res);
     } catch {}
     return [];
@@ -755,7 +828,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ sender_id: senderId, receiver_id: receiverId, content })
       });
       if (res.ok) return await handleResponse<Message>(res);
@@ -773,7 +846,9 @@ export const api = {
 
   async getNotifications(userId: string) {
     try {
-      const res = await fetch(`${API_BASE}/notifications?user_id=${userId}`);
+      const res = await fetch(`${API_BASE}/notifications?user_id=${userId}`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<Notification[]>(res);
     } catch {}
     return [];
@@ -782,7 +857,8 @@ export const api = {
   async markNotificationRead(id: string) {
     try {
       const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        headers: getAuthHeaders()
       });
       if (res.ok) return await handleResponse<any>(res);
     } catch {}
@@ -792,10 +868,8 @@ export const api = {
   // Admin Operations
   async getAdminMetrics() {
     try {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
-      const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
       const res = await fetch(`${API_BASE}/admin/metrics`, {
-        headers: { 'x-user-id': userId }
+        headers: getAuthHeaders()
       });
       if (res.ok) return await handleResponse<AdminMetrics>(res);
     } catch {}
@@ -819,10 +893,8 @@ export const api = {
 
   async getVerificationQueue() {
     try {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
-      const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
       const res = await fetch(`${API_BASE}/admin/verification-queue`, {
-        headers: { 'x-user-id': userId }
+        headers: getAuthHeaders()
       });
       if (res.ok) return await handleResponse<Educator[]>(res);
     } catch {}
@@ -841,14 +913,9 @@ export const api = {
     admin_name?: string;
   }) {
     try {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
-      const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
       const res = await fetch(`${API_BASE}/admin/verification-step`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data)
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -858,14 +925,9 @@ export const api = {
 
   async updateEducatorStatus(educatorId: string, status: string, notes?: string, adminName?: string) {
     try {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
-      const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
       const res = await fetch(`${API_BASE}/admin/educator-status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ educator_id: educatorId, status, notes, admin_name: adminName })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -882,10 +944,8 @@ export const api = {
 
   async getAuditLogs() {
     try {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('iskilllink_user') : null;
-      const userId = userStr ? JSON.parse(userStr)?.id : 'usr-admin-ashabahebwa';
       const res = await fetch(`${API_BASE}/admin/audit-logs`, {
-        headers: { 'x-user-id': userId }
+        headers: getAuthHeaders()
       });
       if (res.ok) return await handleResponse<AdminAction[]>(res);
     } catch {}
@@ -894,7 +954,9 @@ export const api = {
 
   async getMatchesForRequest(requestId: string) {
     try {
-      const res = await fetch(`${API_BASE}/learner-requests/${requestId}/matches`);
+      const res = await fetch(`${API_BASE}/learner-requests/${requestId}/matches`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<any>(res);
     } catch {}
 
@@ -917,7 +979,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/learner-requests/${requestId}/assign-match`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ educator_id: educatorId, admin_name: adminName })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -928,13 +990,15 @@ export const api = {
   // Admin User Directory, Contact Access & Secondary Admin Delegation
   async getAdminUsers() {
     try {
-      const res = await fetch(`${API_BASE}/admin/users`);
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<any[]>(res);
     } catch {}
 
     const users = getLocalStorageData<any[]>('users', initialLocalUsers);
     const learners = getLocalStorageData<any[]>('learners', initialLocalLearners);
-    const educators = getLocalStorageData<any[]>('educators', initialLocalEducators);
+    const educators = getLocalStorageData<Educator[]>('educators', initialLocalEducators);
     const requests = getLocalStorageData<LearnerRequest[]>('learner_requests', []);
     const bookings = getLocalStorageData<Booking[]>('bookings', initialLocalBookings);
 
@@ -966,7 +1030,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${userId}/assign-secondary-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ admin_id: adminId, admin_name: adminName })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -1003,7 +1067,7 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/admin/users/${userId}/revoke-secondary-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ admin_id: adminId, admin_name: adminName })
       });
       if (res.ok) return await handleResponse<any>(res);
@@ -1040,7 +1104,9 @@ export const api = {
 
   async getInterestsDemand() {
     try {
-      const res = await fetch(`${API_BASE}/admin/interests-demand`);
+      const res = await fetch(`${API_BASE}/admin/interests-demand`, {
+        headers: getAuthHeaders()
+      });
       if (res.ok) return await handleResponse<any>(res);
     } catch {}
 

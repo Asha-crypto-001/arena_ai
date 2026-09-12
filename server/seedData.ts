@@ -51,12 +51,15 @@ export const initialSkills: Skill[] = [
   { id: 'skill-beauty-1', category_id: 'cat-beauty', name: 'Bridal Makeup Artistry & Skin Preparation', slug: 'bridal-makeup-artistry', description: 'Color matching for African skin tones, high-definition bridal prep, setting techniques.', level_options: ['beginner', 'intermediate', 'advanced'], typical_duration_hours: 16, popular: true }
 ];
 
+import { hashPasswordSync } from './utils/security.js';
+
 export const initialUsers: Array<User & { password_hash: string }> = [
   {
     id: 'usr-admin-ashabahebwa',
     email: 'ashabahebwahassan665@gmail.com',
-    password_hash: 'Ash@0001$',
+    password_hash: hashPasswordSync('Ash@0001$'),
     role: 'admin',
+    is_primary_admin: true,
     name: 'Ashabahebwa Hassan',
     phone: '+256 744 024 529',
     avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',

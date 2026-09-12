@@ -14,6 +14,7 @@ import {
   initialMatches, initialBookings, initialPayments, initialTransactions,
   initialReviews, initialMessages, initialNotifications, initialAdminActions
 } from './seedData.js';
+import { hashPasswordSync } from './utils/security.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,25 @@ class Database {
 
   constructor() {
     this.data = this.loadDatabase();
+    this.ensurePasswordsHashed();
+  }
+
+  /**
+   * Automatically iterates existing users and upgrades any legacy plaintext passwords
+   * to cryptographically secure bcrypt hashes.
+   */
+  private ensurePasswordsHashed() {
+    let modified = false;
+    for (const user of this.data.users) {
+      if (user.password_hash && !user.password_hash.startsWith('$2')) {
+        user.password_hash = hashPasswordSync(user.password_hash);
+        modified = true;
+      }
+    }
+    if (modified) {
+      this.saveData();
+      console.log('[Security] Automatically upgraded legacy plaintext user passwords to bcrypt hashes.');
+    }
   }
 
   private loadDatabase(): DatabaseState {
@@ -81,7 +101,10 @@ class Database {
 
   public resetToDefault() {
     this.data = {
-      users: initialUsers,
+      users: initialUsers.map(u => ({
+        ...u,
+        password_hash: u.password_hash.startsWith('$2') ? u.password_hash : hashPasswordSync(u.password_hash)
+      })),
       learners: initialLearners,
       educators: initialEducators,
       categories: initialCategories,
@@ -135,17 +158,25 @@ class Database {
   }
 
   public createUser(user: User) {
-    this.data.users.push(user);
+    const userToSave: User = {
+      ...user,
+      password_hash: user.password_hash.startsWith('$2') ? user.password_hash : hashPasswordSync(user.password_hash)
+    };
+    this.data.users.push(userToSave);
     this.saveData();
-    return user;
+    return userToSave;
   }
 
   public updateUser(id: string, updates: Partial<User>) {
     const index = this.data.users.findIndex(u => u.id === id);
     if (index === -1) return null;
+    const cleanUpdates = { ...updates };
+    if (cleanUpdates.password_hash && !cleanUpdates.password_hash.startsWith('$2')) {
+      cleanUpdates.password_hash = hashPasswordSync(cleanUpdates.password_hash);
+    }
     this.data.users[index] = {
       ...this.data.users[index],
-      ...updates,
+      ...cleanUpdates,
       updated_at: new Date().toISOString()
     };
     this.saveData();

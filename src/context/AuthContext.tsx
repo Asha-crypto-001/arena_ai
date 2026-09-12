@@ -32,8 +32,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loadCurrentUser = async () => {
     try {
       setIsLoading(true);
+      const storedToken = localStorage.getItem('iskilllink_token');
       const storedUserId = localStorage.getItem('iskilllink_user_id');
-      if (!storedUserId) {
+      if (!storedToken && !storedUserId) {
         setUser(null);
         setLearnerProfile(null);
         setEducatorProfile(null);
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      const data = await api.getMe(storedUserId);
+      const data = await api.getMe(storedUserId || undefined);
       if (data && data.user) {
         setUser(data.user);
         setLearnerProfile(data.learnerProfile);
@@ -50,11 +51,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setNotifications(notifs);
       } else {
         localStorage.removeItem('iskilllink_user_id');
+        localStorage.removeItem('iskilllink_token');
         setUser(null);
       }
     } catch (err) {
       console.error('Failed to load user session:', err);
       localStorage.removeItem('iskilllink_user_id');
+      localStorage.removeItem('iskilllink_token');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -73,6 +76,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLearnerProfile(data.learnerProfile);
       setEducatorProfile(data.educatorProfile);
       localStorage.setItem('iskilllink_user_id', data.user.id);
+      if (data.token) {
+        localStorage.setItem('iskilllink_token', data.token);
+      }
       
       const notifs = await api.getNotifications(data.user.id);
       setNotifications(notifs);
@@ -90,6 +96,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLearnerProfile(data.learnerProfile);
       setEducatorProfile(data.educatorProfile);
       localStorage.setItem('iskilllink_user_id', data.user.id);
+      if (data.token) {
+        localStorage.setItem('iskilllink_token', data.token);
+      }
 
       const notifs = await api.getNotifications(data.user.id);
       setNotifications(notifs);
@@ -107,6 +116,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLearnerProfile(data.learnerProfile);
       setEducatorProfile(data.educatorProfile);
       localStorage.setItem('iskilllink_user_id', data.user.id);
+      if (data.token) {
+        localStorage.setItem('iskilllink_token', data.token);
+      }
 
       const notifs = await api.getNotifications(data.user.id);
       setNotifications(notifs);
@@ -150,6 +162,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     localStorage.removeItem('iskilllink_user_id');
+    localStorage.removeItem('iskilllink_token');
     setUser(null);
     setLearnerProfile(null);
     setEducatorProfile(null);
